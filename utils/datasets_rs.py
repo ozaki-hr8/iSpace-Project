@@ -310,15 +310,31 @@ class LoadRealSense:  # Stream from Intel RealSense D435
         self.cfg = rs.config()
         self.cfg.enable_stream(rs.stream.depth, self.width, self.height, rs.format.z16, self.fps)
         self.cfg.enable_stream(rs.stream.color, self.width, self.height, rs.format.bgr8, self.fps)
+        
 
         # Start streaming
         self.profile = self.pipe.start(self.cfg)
         self.path = rs.pipeline_profile()
+        self.color_intr = rs.video_stream_profile(self.profile.get_stream(rs.stream.color)).get_intrinsics()
         print(self.path)
 
         print("streaming at w = " + str(self.width) + " h = " + str(self.height) + " fps = " + str(self.fps))
 
+    
     def update(self):
+        def get_filters():
+            decimate = rs.decimation_filter()
+            decimate.set_option(rs.option.filter_magnitude, 1)
+            spatial = rs.spatial_filter()
+            spatial.set_option(rs.option.filter_magnitude, 1)
+            spatial.set_option(rs.option.filter_smooth_alpha, 0.25)
+            spatial.set_option(rs.option.filter_smooth_delta, 50)
+            # disparity
+            depth_to_disparity = rs.disparity_transform(True)
+            disparity_to_depth = rs.disparity_transform(False)
+            return (decimate, spatial, depth_to_disparity, disparity_to_depth)
+
+        decimate, spatial, depth_to_disparity, disparity_to_depth = get_filters()
 
         while True:
             #Wait for frames and get the data
@@ -326,6 +342,12 @@ class LoadRealSense:  # Stream from Intel RealSense D435
             self.aligned_frames = self.align.process(self.frames)
             self.depth_frame = self.aligned_frames.get_depth_frame()
             self.color_frame = self.aligned_frames.get_color_frame()
+
+            self.filter_frame = decimate.process(self.depth_frame)
+            self.filter_frame = depth_to_disparity.process(self.filter_frame)
+            self.filter_frame = spatial.process(self.filter_frame)
+            self.filter_frame = disparity_to_depth.process(self.filter_frame)
+            self.depth_frame = self.filter_frame.as_depth_frame()
 
             #Wait until RGB and depth frames are synchronised
             if not self.depth_frame or not self.color_frame:
@@ -398,6 +420,7 @@ class LoadRealSense:  # Stream from Intel RealSense D435
         img0 = self.imgs.copy()
         depth = self.depths.copy()
         distance = self.distance.copy()
+        color_intr = self.color_intr
         if cv2.waitKey(1) == ord('q'):  # q to quit
             cv2.destroyAllWindows()
             raise StopIteration
@@ -421,7 +444,7 @@ class LoadRealSense:  # Stream from Intel RealSense D435
         #print("ini img-final: " + str(np.shape(img)))
 
         # Return depth, depth0, img, img0
-        return self.sources,depth, distance, depth_scale, img, img0, None
+        return self.sources,depth, distance, depth_scale, img, img0, None, color_intr
 
     def __len__(self):
         return len(self.sources)  # 1E12 frames = 32 streams at 30 FPS for 30 years
