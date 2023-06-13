@@ -43,14 +43,18 @@ mp_holistic =  mp.solutions.holistic
 # class_name ="None"
 
 #Botttle
-# class_name ="Holding Bottle"
+class_name ="Holding Bottle"
 # class_name ="Drinking"
 # class_name ="None"
 
 #Phone
 # class_name ="Holding Phone"
 # class_name ="Calling on Phone"
-class_name ="None"
+# class_name ="None"
+
+#Cushion
+# class_name = "Holding Cushion"
+# class_name = "None"
 
 #Keybord
 # class_name ="Working on Computer"
@@ -259,11 +263,16 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             # y = float(xyxy[1]) / hval
                             # w = float(xyxy[2] - xyxy[0]) / wval
                             # h3= float(xyxy[3] - xyxy[1]) / hval
-                            if obj == '39': #bottle
+                            if obj == '1': #bottle
                                 x = float(xyxy[0]) / wval
                                 y = float(xyxy[1]) / hval
                                 w = float(xyxy[2] - xyxy[0]) / wval
                                 h = float(xyxy[3] - xyxy[1]) / hval
+                            #if obj == '81': #cushion
+                            #    x = float(xyxy[0]) / wval
+                            #    y = float(xyxy[1]) / hval
+                            #    w = float(xyxy[2] - xyxy[0]) / wval
+                            #    h = float(xyxy[3] - xyxy[1]) / hval
                             #hrcode
 
                         if save_img or save_crop or view_img:  # Add bbox to image
@@ -325,10 +334,10 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         row = coords_s+coords_human+coords_obj+shape_obj+distance_so+distance_s
                         row.insert(0,class_name)
 
-                        with open('training_csv/cellphone_2d.csv',mode='a' ,newline='') as f:
-                            # if(x!=0):
-                            csv_writer =csv.writer(f, delimiter=',',quotechar='"',quoting=csv.QUOTE_MINIMAL)
-                            csv_writer.writerow(row)
+                        with open('training_csv/bottle_2d.csv',mode='a' ,newline='') as f:
+                            if(x!=0):
+                                csv_writer =csv.writer(f, delimiter=',',quotechar='"',quoting=csv.QUOTE_MINIMAL)
+                                csv_writer.writerow(row)
 
                     except:
                         pass

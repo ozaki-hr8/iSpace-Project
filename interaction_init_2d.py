@@ -6,7 +6,7 @@ import csv
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic =  mp.solutions.holistic
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(6)
 
 with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
     while cap.isOpened():
@@ -37,7 +37,7 @@ with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=
             for val in range(1, num_coords+1):
                 landmarks += ['distance_s_x{}'.format(val), 'distance_s_y{}'.format(val), 'distance_s_z{}'.format(val), 'distance_s_v{}'.format(val)]
 
-            with open('training_csv/cellphone_2d.csv',mode='w' ,newline='') as f:
+            with open('training_csv/bottle_2d.csv',mode='w' ,newline='') as f:
                 csv_writer =csv.writer(f, delimiter=',',quotechar='"',quoting=csv.QUOTE_MINIMAL)
                 csv_writer.writerow(landmarks)
             break

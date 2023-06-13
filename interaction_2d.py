@@ -38,10 +38,10 @@ import math
 
 # with open('pkl/action_2d.pkl', 'rb') as f0:
 #     model_action = pickle.load(f0)
-with open('pkl/cellphone_2d.pkl', 'rb') as f1:
-    model_cellphone = pickle.load(f1)
-# with open('pkl/bottle_2d.pkl', 'rb') as f2:
-#     model_bottle = pickle.load(f2)
+# with open('pkl/cellphone_2d.pkl', 'rb') as f1:
+#    model_cellphone = pickle.load(f1)
+with open('pkl/bottle_2d.pkl', 'rb') as f2:
+    model_bottle = pickle.load(f2)
 # with open('pkl/book_2d.pkl', 'rb') as f3:
 #     model_book = pickle.load(f3)
 # with open('pkl/keyboard_2d.pkl', 'rb') as f4:
@@ -322,7 +322,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                                 y3 = float(xyxy[1]) / hval
                                 w3 = float(xyxy[2] - xyxy[0]) / wval
                                 h3 = float(xyxy[3] - xyxy[1]) / hval
-                            if obj == '39': #cup
+                            if obj == '1': #cup
                                 x4 = float(xyxy[0]) / wval
                                 y4 = float(xyxy[1]) / hval
                                 w4 = float(xyxy[2] - xyxy[0]) / wval
@@ -354,10 +354,10 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                                             )
                     try:
                         # action_class, action_prob = predict_action(model_action,results, wval,hval,coords_s_pre, distance_s, action_class, action_prob)
-                        predict_interaction(x,y,w,h,model_cellphone,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        # predict_interaction(x,y,w,h,model_cellphone,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
                         # predict_interaction(x2,y2,w2,h2,model_book,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
                         # predict_interaction(x3,y3,w3,h3,model_keyboard,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        # predict_interaction(x4,y4,w4,h4,model_bottle,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        predict_interaction(x4,y4,w4,h4,model_bottle,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
                         if(interaction_class_out):
                             body_language_prob_all=max(interaction_prob_out)
                             body_language_class_all=interaction_class_out[interaction_prob_out.index(max(interaction_prob_out))]

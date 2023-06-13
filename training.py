@@ -14,7 +14,7 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-df = pd.read_csv('training_csv/cellphone_2d.csv') 
+df = pd.read_csv('training_csv/bottle_2d.csv') 
 X = df.drop('class', axis=1) # features
 y = df['class'] # target value
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1234)
@@ -35,7 +35,7 @@ for algo, model in fit_models.items():
     yhat = model.predict(X_test)
     print(algo, accuracy_score(y_test, yhat))
 
-with open('pkl/cellphone_2d.pkl', 'wb') as f:
+with open('pkl/bottle_2d.pkl', 'wb') as f:
     pickle.dump(fit_models['rf'], f)
 
 cm = confusion_matrix(y_test, yhat)
