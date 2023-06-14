@@ -335,7 +335,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         row.insert(0,class_name)
 
                         with open('training_csv/bottle_2d.csv',mode='a' ,newline='') as f:
-                            if(x!=0):
+                            if(x!=0 or class_name=='None'):
                                 csv_writer =csv.writer(f, delimiter=',',quotechar='"',quoting=csv.QUOTE_MINIMAL)
                                 csv_writer.writerow(row)
 
