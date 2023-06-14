@@ -323,10 +323,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             hval = im0.shape[0]
                             wval = im0.shape[1]
 
-                            print('obj: '+str(obj))
-
                             if obj == '67': #cell phone
-                                print('cellphone!')
                                 x = float(xyxy[0]) / wval
                                 y = float(xyxy[1]) / hval
                                 w = float(xyxy[2] - xyxy[0]) / wval
