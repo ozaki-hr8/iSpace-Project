@@ -4,9 +4,10 @@ import json
 import time
 import numpy as np
 import cv2
+from sklearn.cluster import DBSCAN
 
 # 接続待ちするサーバのホスト名とポート番号を指定
-HOST = "127.0.0.6"
+HOST = "127.0.0.5"
 PORT = 55580
 # マップにプロットする際のX,Y範囲(m)
 X_RANGE = 2.0
@@ -75,25 +76,15 @@ def map_view():
     #マップの更新間隔(秒)
     RELOAD_INTERVAL = 0.2
     #表示するマップの時間範囲(指定時間から-TIME_RANGE~TIME_RANGE)(秒)
-    TIME_RANGE = 0.1
+    TIME_RANGE = 1.0
     #マップの表示遅延時間(秒)
     TIME_DELAY = 1.0
     while True:
+        map_img = cv2.cvtColor((np.zeros(MAP_SIZE, np.uint8)+255), cv2.COLOR_GRAY2BGR)
         #指定した範囲の時間の座標をすべて取り出す
         points_array = get_points_array(TIME_RANGE, TIME_DELAY)
-        #白画像作成
-        map_img = cv2.cvtColor((np.zeros(MAP_SIZE, np.uint8)+255), cv2.COLOR_GRAY2BGR)
         #マップに点を打つ
-        for data in points_array:
-            y = int((data[2]/Y_RANGE)*MAP_SIZE[1])
-            x = int(((data[1]/X_RANGE)+1)*(MAP_SIZE[0]/2))
-            weight = 255-int(255*data[3])
-            if data[4] == 0:
-                cv2.circle(map_img, (y,x), 3, (weight, weight, 255), thickness=-1)
-            elif data[4] == 1:
-                cv2.circle(map_img, (y,x), 3, (weight, 255, weight), thickness=-1)
-            else:
-                cv2.circle(map_img, (y,x), 3, (255, weight, weight), thickness=-1)
+        map_img = cluster(points_array, map_img) 
         cv2.imshow('server_map', map_img) 
         cv2.waitKey(1)
         time.sleep(RELOAD_INTERVAL)
@@ -102,6 +93,39 @@ def map_view():
 def get_points_array(time_range, time_delay):
     delay_time = time.time() - time_delay
     return data_array[abs(delay_time - data_array[:, 0]) <= time_range]
+
+def cluster(points_array, img):
+    #同じクラスタとみなす距離
+    EPS = 0.3
+    #一つのクラスタを形成するために必要な最低サンプル数
+    MIN_SAMPLES = 5
+
+    if points_array.shape[0] == 0:
+        return img
+    points = points_array[:,1:3]
+    dbscan = DBSCAN(eps=EPS, min_samples=MIN_SAMPLES)
+    cluster_pred = dbscan.fit_predict(points)
+    for i in range(-1, max(cluster_pred)+1):
+        cluster = points[cluster_pred==i]
+        for p in cluster:
+            p[1] = int((p[1]/Y_RANGE)*MAP_SIZE[1])
+            p[0] = int(((p[0]/X_RANGE)+1)*(MAP_SIZE[0]/2))
+            center = (int(p[1]),int(p[0]))
+            print(center)
+            if i == 0:
+                cv2.circle(img, center, 3, (127, 127, 255), thickness=-1)
+            elif i == 1:
+                cv2.circle(img, center, 3, (127, 255, 127), thickness=-1)
+            elif i == -1:
+                cv2.circle(img, center, 3, (0, 0, 0), thickness=-1)
+            else:
+                cv2.circle(img, center, 3, (255, 127, 127), thickness=-1)
+        if cluster.shape[0] > 0:
+            average = np.mean(cluster, axis=0)
+            center = (int(average[1]),int(average[0]))
+            print(center)
+            img = cv2.circle(img, center, 3, (0, 0, 255), thickness=-1)
+    return img
 
 if __name__ == "__main__":
     main()
