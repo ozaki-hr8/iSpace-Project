@@ -12,7 +12,7 @@ Z = -2.6057855270816472
 THETA = 4.749273148314835
 
 #マップ生成サーバーのIP,ポート
-CONNECT = True  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
+CONNECT = False  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
 SERVER_IP = "127.0.0.5"
 SERVER_PORT = 55580
 #----------------------------------------------------------------------------------------
@@ -98,6 +98,8 @@ if CONNECT:
 #hrcode
 
 def get_3d_location(color_intr, depth_frame, pixel_x, pixel_y):
+    if pixel_x==0 and pixel_y==0:
+        return None
     distance = depth_frame.get_distance(pixel_x,pixel_y)
     if distance == 0:
         return None
@@ -321,7 +323,10 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             hval = im0.shape[0]
                             wval = im0.shape[1]
 
+                            print('obj: '+str(obj))
+
                             if obj == '67': #cell phone
+                                print('cellphone!')
                                 x = float(xyxy[0]) / wval
                                 y = float(xyxy[1]) / hval
                                 w = float(xyxy[2] - xyxy[0]) / wval
@@ -434,15 +439,16 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         # # for action
                         # body_language_class= model1.predict(X2)[0]
                         # body_language_prob = model1.predict_proba(X2)[0]
-                        print(round(wval*x), round(hval*y))
+
+                        im_x = round(wval*x+wval*w/2)
+                        im_y = round(hval*y+hval*h/2)
                         # location_3d = get_3d_location(color_intr, dataset.depth_frame, round(wval*x), round(hval*y))
-                        location_3d = get_3d_location(color_intr, dataset.depth_frame, round(wval*x), round(hval*y))
-                        print(location_3d)
-                        print(location_3d)
+                        location_3d = get_3d_location(color_intr, dataset.depth_frame, im_x, im_y)
                         if location_3d is not None:
                             #マップ生成サーバーに座標を送信
                             if CONNECT:
                                 send_location(location_3d)
+                            cv2.circle(im0, (im_x, im_y), 3, (0, 0, 255), thickness=-1)
                             map_view(location_3d)
                             print(location_3d)
 
