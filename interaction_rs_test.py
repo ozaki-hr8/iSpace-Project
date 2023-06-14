@@ -5,6 +5,23 @@ Usage:
     $ python path/to/detect.py --source path/to/img.jpg --weights yolov5s.pt --img 640
 """
 
+#-------------------------------------map----------------------------------------------
+#座標変換用定数。predict_camera_locationで取得する(メインカメラについては、X,Y,THETA=0)
+X = 3.682768768475109
+Z = -2.6057855270816472
+THETA = 4.749273148314835
+
+#realsense設定
+WIDTH = 640
+HEIGHT = 480
+FPS = 30
+
+#マップ生成サーバーのIP,ポート
+CONNECT = True  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
+SERVER_IP = "127.0.0.5"
+SERVER_PORT = 55580
+#----------------------------------------------------------------------------------------
+
 import argparse
 import sys
 import time
@@ -41,9 +58,16 @@ def get_distance(x1, y1, x2, y2):
     return d
 
 import pyrealsense2 as rs
+import socket
+import json
 
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic =  mp.solutions.holistic
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+if CONNECT:
+    sock.connect((SERVER_IP, SERVER_PORT))
+        
 
 # with open('pkl/action_3d.pkl', 'rb') as f:
 #     model1 = pickle.load(f)
@@ -94,6 +118,23 @@ def map_view(location_3d):
     x = int(((location_3d[0]/X_RANGE)+1)*(MAP_SIZE[0]/2))
     cv2.circle(white_img, (y,x), 3, (0, 0, 255), thickness=-1)
     cv2.imshow('map', white_img)
+
+def send_location(location_3d):
+    global sock
+    x,z = calc_location(location_3d)
+    print(x,z)
+    data = {
+               'person' : ['{},{},1.0'.format(x, z)],
+               'timestamp' : time.time()
+            }
+    sock.send(json.dumps(data).encode("UTF-8"))
+
+def calc_location(location_3d):
+    if X == 0 and Z == 0:
+        return location_3d[0],location_3d[2]
+    x = -X+location_3d[0]*math.cos(THETA)-location_3d[2]*math.sin(THETA)
+    z = -Z+location_3d[0]*math.sin(THETA)+location_3d[2]*math.cos(THETA)
+    return (x,z)
 
 
 @torch.no_grad()
@@ -405,6 +446,8 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         print(location_3d)
                         if location_3d is not None:
                             #マップ生成サーバーに座標を送信
+                            if CONNECT:
+                                send_location(location_3d)
                             map_view(location_3d)
                             print(location_3d)
 
