@@ -145,7 +145,7 @@ class Cluster:
                     unique_ids = np.unique(cluster[:,4+i*2])
                     for id in unique_ids:
                         id_data = cluster[cluster[:,4+i*2] == id]
-                        average = np.mean(id_data[:, 4+i*2]*get_interact_weight_for_list(id_data[:,3]))
+                        average = np.mean(id_data[:, 5+i*2]*get_interact_weight_for_list(id_data[:,3]))
                         column_list.append([id, average])
                 prod_list.append(column_list)
         return average_list, prod_list
