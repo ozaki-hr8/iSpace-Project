@@ -4,7 +4,7 @@ import json
 import time
 import numpy as np
 import cv2
-from point_handler import PointHandler, Cluster, PointMap
+from utils.point_handler import PointHandler, Cluster, PointMap
 
 # 接続待ちするサーバのホスト名とポート番号を指定
 HOST = "127.0.0.5"
@@ -63,9 +63,9 @@ def map_view():
     global person_map
     global person_data
     #マップの更新間隔(秒)
-    RELOAD_INTERVAL = 1
+    RELOAD_INTERVAL = 0.2
     #表示するマップの時間範囲(指定時間から-TIME_RANGE~TIME_RANGE)(秒)
-    TIME_RANGE = 1.0
+    TIME_RANGE = 0.5
     #マップの表示遅延時間(秒)
     TIME_DELAY = 1.0
     while True:
@@ -74,8 +74,8 @@ def map_view():
         map_img = person_map.clear_map_img()
         if point_list is not None:
             cluster_list = person_cluster.get_cluster(point_list)
-            average_list = person_cluster.get_average_list(point_list, cluster_list)
-            map_img = person_map.get_map_img(point_list, cluster_list, average_list, map_img)
+            average_list, prod_list = person_cluster.get_average_and_prod_list(point_list, cluster_list)
+            map_img = person_map.get_map_img(point_list, cluster_list, average_list, prod_list, map_img)
         cv2.imshow('server_map', map_img) 
         cv2.waitKey(1)
         time.sleep(RELOAD_INTERVAL)

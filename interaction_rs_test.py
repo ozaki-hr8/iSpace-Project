@@ -127,10 +127,7 @@ def send_location(data_dict, current_time):
     data_dict['timestamp'] = current_time
     sock.send(json.dumps(data_dict).encode("UTF-8"))
 
-def add_location_data(data_dict, data_name, location_3d):
-    point = Point(location_3d[0], location_3d[2])
-    point.add_probability('Holding Bottle', 0.9)
-    point.convert_location(X,Z,THETA,PITCH)
+def add_location_data(data_dict, data_name, point):
     if data_name in data_dict:
         data_dict[data_name].append(point.get_json())
     else:
@@ -449,7 +446,12 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             location_3d = get_3d_location(color_intr, dataset.depth_frame, im_x, im_y)
                             if location_3d is not None:
                                 #マップ生成サーバーに座標を送信
-                                add_location_data(data_dict, 'person', location_3d)
+                                point = Point(location_3d[0], location_3d[2])
+                                #add_probabilityでclassごとの確率を追加していく
+                                point.add_probability('Holding Bottle', 0.9)
+                                #座標系変換を行う
+                                point.convert_location(X,Z,THETA,PITCH)
+                                add_location_data(data_dict, 'person', point)
                                 cv2.circle(im0, (im_x, im_y), 3, (0, 0, 255), thickness=-1)
                                 map_view(location_3d)
                                 print(location_3d)

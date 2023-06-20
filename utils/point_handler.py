@@ -21,6 +21,32 @@ def name_to_id(name):
     return name_dict[name]
   return None
 
+def get_interact_weight(distance):
+    if distance < 1:
+        return 0.92
+    elif distance < 2:
+        return 0.95
+    elif distance < 3:
+        return 0.92
+    elif distance < 4:
+        return 0.81
+    elif distance < 5:
+        return 0.55
+    elif distance < 6:
+        return 0.61
+    else:
+        return 0.3
+    
+def get_interact_weight_for_list(distance_list):
+    for i in range(distance_list.shape[0]):
+        distance_list[i] = get_interact_weight(distance_list[i])
+    return distance_list
+
+
+def get_location_weight(distance):
+    rms = -2.5E-4 + 1.1904762E-4 * distance + 0.003761904762*(distance^2)
+    return 1 - rms/distance
+
 #クライアント側でポイントデータを扱う際に使用
 class PointHandler:
     def __init__(self, class_name):
@@ -39,7 +65,10 @@ class PointHandler:
                         return None
                     if not all(key in target for key in ('x', 'z', 'd', 'probs')):
                         return None
-                    point_data = np.array([[time_stamp, target['x'], target['z'], target['d'], np.array(target['probs'])]], dtype=object)
+                    point_data = [time_stamp, target['x'], target['z'], target['d']]
+                    probs = target['probs']
+                    flattened_list = [item for sublist in probs for item in sublist]
+                    point_data = np.array([[time_stamp, target['x'], target['z'], target['d']]+flattened_list], dtype=float)
                     if data_list is None:
                         data_list = point_data
                     else:
@@ -99,17 +128,27 @@ class Cluster:
             return 
         return self.dbscan.fit_predict(point_list[:,1:3])
     
-    def get_average_list(self, point_list, cluster_list):
+    def get_average_and_prod_list(self, point_list, cluster_list):
         if point_list is None or cluster_list is None:
             return None
         average_list = []
+        prod_list = []
         for i in range(-1, max(cluster_list)+1):
             cluster = point_list[cluster_list==i]
             if cluster.shape[0] > 0:
                 x_mean = np.mean(cluster[:,1])
                 z_mean = np.mean(cluster[:,2])
                 average_list.append([x_mean,z_mean])
-        return average_list
+                print(cluster[0].shape[0])
+                for i in range(max(0, int((cluster[0].shape[0]-4)/2))):
+                    column_list = []
+                    unique_ids = np.unique(cluster[:,4+i*2])
+                    for id in unique_ids:
+                        id_data = cluster[cluster[:,4+i*2] == id]
+                        average = np.mean(id_data[:, 4+i*2]*get_interact_weight_for_list(id_data[:,3]))
+                        column_list.append([id, average])
+                prod_list.append(column_list)
+        return average_list, prod_list
     
 import cv2
 
@@ -120,7 +159,7 @@ class PointMap:
         self.x_range = x_range
         self.z_range = z_range
 
-    def get_map_img(self, point_list, cluster_list, average_list, map_img):
+    def get_map_img(self, point_list, cluster_list, average_list, prob_list, map_img):
         PALE_COLORs = [(255,255,128),(255,128,255),(128,255,255),(255,192,192),(192,255,192),(192,192,255)]
         DARK_COLORs = [(255,0,0), (0,255,0), (0,0,255), (128,128,0), (128,0,128), (0,128,128)]
 
@@ -138,6 +177,7 @@ class PointMap:
             color = DARK_COLORs[min(avg_id,5)]
             center = (int((point[1]/self.z_range)*self.width),int(((point[0]/self.x_range)+1)*(self.height/2)))
             cv2.circle(map_img, center, 3, color, thickness=-1)
+            cv2.putText(map_img, str(prob_list[avg_id]), center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
             avg_id += 1
         return map_img
     
