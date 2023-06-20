@@ -59,10 +59,10 @@ class PointHandler:
 import math
 
 class Point:
-    def __init__(self, x, z, distance):
+    def __init__(self, x, z):
         self.x = x
         self.z = z
-        self.distance = distance
+        self.distance = z
         self.prod_list = []
 
     def add_probability(self, prob_name, probability):

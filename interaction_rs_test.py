@@ -40,6 +40,7 @@ from utils.general import check_img_size, check_requirements, check_imshow, colo
     apply_classifier, scale_coords, xyxy2xywh, strip_optimizer, set_logging, increment_path, save_one_box
 from utils.plots import colors, plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_sync
+from utils.point_handler import Point
 
 #hrcode
 import mediapipe as mp
@@ -108,8 +109,6 @@ def get_3d_location(color_intr, depth_frame, pixel_x, pixel_y):
     if distance == 0:
         return None
     location_3d = rs.rs2_deproject_pixel_to_point(color_intr , [pixel_x,pixel_y], distance)
-    #縦方向の傾きを考慮し、z座標を調整する
-    location_3d[2] *= math.cos(PITCH)
     return location_3d
 
 def map_view(location_3d):
@@ -128,20 +127,14 @@ def send_location(data_dict, current_time):
     data_dict['timestamp'] = current_time
     sock.send(json.dumps(data_dict).encode("UTF-8"))
 
-def calc_location(location_3d):
-    if X == 0 and Z == 0:
-        return location_3d[0],location_3d[2]
-    x = -X+location_3d[0]*math.cos(THETA)-location_3d[2]*math.sin(THETA)
-    z = -Z+location_3d[0]*math.sin(THETA)+location_3d[2]*math.cos(THETA)
-    return (x,z)
-
 def add_location_data(data_dict, data_name, location_3d):
-    x,z = calc_location(location_3d)
-    data = '{},{},1.0'.format(x, z)
+    point = Point(location_3d[0], location_3d[2])
+    point.add_probability('Holding Bottle', 0.9)
+    point.convert_location(X,Z,THETA,PITCH)
     if data_name in data_dict:
-        data_dict[data_name].append(data)
+        data_dict[data_name].append(point.get_json())
     else:
-        data_dict[data_name] = [data]
+        data_dict[data_name] = [point.get_json()]
 
 @torch.no_grad()
 def run(weights='yolov5s.pt',  # model.pt path(s)
@@ -453,7 +446,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         for x, y, w, h in det_target_list:
                             im_x = round(wval*x+wval*w/2)
                             im_y = round(hval*y+hval*h/2)
-                            # location_3d = get_3d_location(color_intr, dataset.depth_frame, round(wval*x), round(hval*y))
                             location_3d = get_3d_location(color_intr, dataset.depth_frame, im_x, im_y)
                             if location_3d is not None:
                                 #マップ生成サーバーに座標を送信
