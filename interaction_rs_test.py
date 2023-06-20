@@ -7,12 +7,16 @@ Usage:
 
 #-------------------------------------map----------------------------------------------
 #座標変換用定数。predict_camera_locationで取得する(メインカメラについては、X,Y,THETA=0)
-X = 3.682768768475109
-Z = -2.6057855270816472
-THETA = 4.749273148314835
+# X = 3.682768768475109
+# Z = -2.6057855270816472
+# THETA = 4.749273148314835
+X = 0
+Z = 0
+THETA = 0
+PITCH = 0
 
 #マップ生成サーバーのIP,ポート
-CONNECT = False  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
+CONNECT = True  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
 SERVER_IP = "127.0.0.5"
 SERVER_PORT = 55580
 #----------------------------------------------------------------------------------------
@@ -103,7 +107,10 @@ def get_3d_location(color_intr, depth_frame, pixel_x, pixel_y):
     distance = depth_frame.get_distance(pixel_x,pixel_y)
     if distance == 0:
         return None
-    return rs.rs2_deproject_pixel_to_point(color_intr , [pixel_x,pixel_y], distance)
+    location_3d = rs.rs2_deproject_pixel_to_point(color_intr , [pixel_x,pixel_y], distance)
+    #縦方向の傾きを考慮し、z座標を調整する
+    location_3d[2] *= math.cos(PITCH)
+    return location_3d
 
 def map_view(location_3d):
     X_RANGE = 2.0
@@ -116,15 +123,10 @@ def map_view(location_3d):
     cv2.circle(white_img, (y,x), 3, (0, 0, 255), thickness=-1)
     cv2.imshow('map', white_img)
 
-def send_location(location_3d):
+def send_location(data_dict, current_time):
     global sock
-    x,z = calc_location(location_3d)
-    print(x,z)
-    data = {
-               'person' : ['{},{},1.0'.format(x, z)],
-               'timestamp' : time.time()
-            }
-    sock.send(json.dumps(data).encode("UTF-8"))
+    data_dict['timestamp'] = current_time
+    sock.send(json.dumps(data_dict).encode("UTF-8"))
 
 def calc_location(location_3d):
     if X == 0 and Z == 0:
@@ -133,6 +135,13 @@ def calc_location(location_3d):
     z = -Z+location_3d[0]*math.sin(THETA)+location_3d[2]*math.cos(THETA)
     return (x,z)
 
+def add_location_data(data_dict, data_name, location_3d):
+    x,z = calc_location(location_3d)
+    data = '{},{},1.0'.format(x, z)
+    if data_name in data_dict:
+        data_dict[data_name].append(data)
+    else:
+        data_dict[data_name] = [data]
 
 @torch.no_grad()
 def run(weights='yolov5s.pt',  # model.pt path(s)
@@ -282,6 +291,8 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             if classify:
                 pred = apply_classifier(pred, modelc, img, im0s)
 
+            det_target_list = []
+
             # Process predictions
             for i, det in enumerate(pred):  # detections per image
                 x=y=w=h=z=0
@@ -323,12 +334,13 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             hval = im0.shape[0]
                             wval = im0.shape[1]
 
-                            if obj == '67': #cell phone
+                            if obj == '0': #cell phone
                                 x = float(xyxy[0]) / wval
                                 y = float(xyxy[1]) / hval
                                 w = float(xyxy[2] - xyxy[0]) / wval
                                 h = float(xyxy[3] - xyxy[1]) / hval
                                 z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
+                                det_target_list.append([x,y,w,h])
                                 #73 book 66 key 39 bottle
                             if obj == '73': #book
                                 x2 = float(xyxy[0]) / wval
@@ -437,17 +449,20 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         # body_language_class= model1.predict(X2)[0]
                         # body_language_prob = model1.predict_proba(X2)[0]
 
-                        im_x = round(wval*x+wval*w/2)
-                        im_y = round(hval*y+hval*h/2)
-                        # location_3d = get_3d_location(color_intr, dataset.depth_frame, round(wval*x), round(hval*y))
-                        location_3d = get_3d_location(color_intr, dataset.depth_frame, im_x, im_y)
-                        if location_3d is not None:
-                            #マップ生成サーバーに座標を送信
-                            if CONNECT:
-                                send_location(location_3d)
-                            cv2.circle(im0, (im_x, im_y), 3, (0, 0, 255), thickness=-1)
-                            map_view(location_3d)
-                            print(location_3d)
+                        data_dict = {}
+                        for x, y, w, h in det_target_list:
+                            im_x = round(wval*x+wval*w/2)
+                            im_y = round(hval*y+hval*h/2)
+                            # location_3d = get_3d_location(color_intr, dataset.depth_frame, round(wval*x), round(hval*y))
+                            location_3d = get_3d_location(color_intr, dataset.depth_frame, im_x, im_y)
+                            if location_3d is not None:
+                                #マップ生成サーバーに座標を送信
+                                add_location_data(data_dict, 'person', location_3d)
+                                cv2.circle(im0, (im_x, im_y), 3, (0, 0, 255), thickness=-1)
+                                map_view(location_3d)
+                                print(location_3d)
+                        if CONNECT:
+                            send_location(data_dict, time.time())
 
 
 

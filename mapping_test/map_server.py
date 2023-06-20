@@ -10,8 +10,8 @@ from sklearn.cluster import DBSCAN
 HOST = "127.0.0.5"
 PORT = 55580
 # マップにプロットする際のX,Y範囲(m)
-X_RANGE = 2.0
-Y_RANGE = 5.0
+X_RANGE = 15.0
+Y_RANGE = 15.0
 #マップ画像のサイズ (縦,横)
 MAP_SIZE=(480,640)
 #カメラ数
