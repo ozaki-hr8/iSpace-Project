@@ -47,6 +47,8 @@ def get_location_weight(distance):
     rms = -2.5E-4 + 1.1904762E-4 * distance + 0.003761904762*(distance^2)
     return 1 - rms/distance
 
+import pandas as pd
+
 #クライアント側でポイントデータを扱う際に使用
 class PointHandler:
     def __init__(self, class_name):
@@ -84,6 +86,19 @@ class PointHandler:
             return None
         point_list = data_list[indices]
         return point_list
+    
+    def to_csv(self, path, data_list, action, interact_list, with_obj_list):
+        df = pd.DataFrame({
+            'time' : data_list[:,0],
+            'x' : data_list[:,1],
+            'z' : data_list[:,2],
+            'action' : action,
+            'interact' : ",".join(map(str, interact_list)),
+            'with_obj' : ",".join(map(str, with_obj_list))
+        })
+        df.set_index('time')
+        df.to_csv(path, encoding='shift_jis')
+
     
 import math
 
