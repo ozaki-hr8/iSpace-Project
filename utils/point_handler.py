@@ -2,9 +2,15 @@ import numpy as np
 import time
 
 id_dict = {
-    0 : 'None',
-    1 : 'Holding Bottle',
-    2 : 'Drinking Bottle'
+    0 : ['None', 'None'],
+    1 : ['Holding', 'Bottle'],
+    2 : ['Drinking', 'Bottle']
+}
+
+name_dict = {
+    'None' : 0,
+    'Holding Bottle' : 1,
+    'Drinking Bottle' : 2
 }
 
 name_dict = {value: key for key, value in id_dict.items()}
@@ -51,8 +57,9 @@ import pandas as pd
 
 #クライアント側でポイントデータを扱う際に使用
 class PointHandler:
-    def __init__(self, class_name):
+    def __init__(self, class_name, none_threshold=0.9):
         self.class_name = class_name
+        self.threshold = none_threshold
         
     def put_json_data(self, json_dic, data_list=None):
         if not isinstance(json_dic, dict):
@@ -87,11 +94,52 @@ class PointHandler:
         point_list = data_list[indices]
         return point_list
     
-    def to_csv(self, path, data_list, action, interact_list, with_obj_list):
+    def analize_data(self, data_list):
+        interact_list = []
+        with_obj_list = []
+        action = None
+        data_amount = max(0, int((data_list[0].shape[0]-4)/2))
+        for i in range(data_amount):
+            #しきい値の割合(0.9)以上がNoneだった場合、リストに追加しない(None処理)
+            if np.where(data_list[:,4+i*2] == 0).shape[0]/data_list.shape[0] > self.threshold:
+                continue
+            column_list = []
+            column_total = 0
+            #列にあるidをすべて取得
+            unique_ids = np.unique(data_list[:,4+i*2])
+            for id in unique_ids:
+                id_data = data_list[data_list[:,4+i*2] == id]
+                id_total = np.sum(id_data[:, 5+i*2]*get_interact_weight_for_list(id_data[:,3]))
+                column_total += id_total
+                column_list.append([id, id_total])
+            max_id = 0
+            max_prob = 0
+            for data in column_list:
+                prob = data[1]/id_total
+                if max_prob < prob:
+                    max_prob = prob
+                    max_id = data[0]
+            class_data = id_to_name(max_id)
+            #最後にアクションデータが格納されている
+            if data_amount-1 == i:
+                action = class_data
+                continue
+            #インタラクションデータの場合は分けて格納
+            if class_data is None:
+                interact_list.append('NO CLASS')
+                with_obj_list.append('NO OBJ')
+            else:
+                interact_list.append(class_data[0])
+                with_obj_list.append(class_data[1])
+
+        return interact_list, with_obj_list, action
+
+    
+    def to_csv(self, path, time_stamp, average_loc, action, interact_list, with_obj_list):
         df = pd.DataFrame({
-            'time' : data_list[:,0],
-            'x' : data_list[:,1],
-            'z' : data_list[:,2],
+            'time' : time_stamp,
+            'x' : average_loc[0],
+            'z' : average_loc[1],
             'action' : action,
             'interact' : ",".join(map(str, interact_list)),
             'with_obj' : ",".join(map(str, with_obj_list))
@@ -164,6 +212,11 @@ class Cluster:
                 prod_list.append(column_list)
         return average_list, prod_list
     
+    def get_normal_average(self, point_list):
+        if point_list is None:
+            return None
+        return np.mean(point_list[:,1:3], axis=0)
+    
 import cv2
 
 class PointMap:
@@ -193,6 +246,13 @@ class PointMap:
             cv2.circle(map_img, center, 3, color, thickness=-1)
             cv2.putText(map_img, str(prob_list[avg_id]), center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
             avg_id += 1
+        return map_img
+    
+    def get_normal_map_img(self, average_loc, map_img):
+        if average_loc is None:
+            return map_img
+        center = (int((average_loc[1]/self.z_range)*self.width),int(((average_loc[0]/self.x_range)+1)*(self.height/2)))
+        cv2.circle(map_img, center, 3, (0,0,255), thickness=-1)
         return map_img
     
     def clear_map_img(self):
