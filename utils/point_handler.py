@@ -5,13 +5,23 @@ id_dict = {
     0 : ['none', 'none'],
     1 : ['holding', 'bottle'],
     2 : ['drinking', 'bottle'],
-    3 : ['calling', 'phone']
+    3 : ['holding', 'phone'],
+    4 : ['calling', 'phone'],
+    5 : ['holding', 'book'],
+    6 : ['reading', 'book'],
+    7 : ['Working', 'Computer']
 }
 
 name_dict = {
     'None' : 0,
     'Holding Bottle' : 1,
-    'Drinking Bottle' : 2
+    'Drinking' : 2,
+    'Holding Phone' : 3,
+    'Calling on Phone' : 4,
+    'Holding Book' : 5,
+    'Reading Book' : 6,
+    'Working on Computer' : 7,
+    'Holding Cushion' : 8
 }
 
 def id_to_name(id):
