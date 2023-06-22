@@ -98,7 +98,6 @@ class PointHandler:
         })
         df.set_index('time')
         df.to_csv(path, encoding='shift_jis')
-
     
 import math
 
