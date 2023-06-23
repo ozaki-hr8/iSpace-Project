@@ -7,7 +7,7 @@ import cv2
 from utils.point_handler import PointHandler, Cluster, PointMap
 
 # 接続待ちするサーバのホスト名とポート番号を指定
-HOST = "127.0.0.5"
+HOST = "172.31.176.218"
 PORT = 55580
 
 #カメラ数
@@ -67,15 +67,21 @@ def map_view():
     #表示するマップの時間範囲(指定時間から-TIME_RANGE~TIME_RANGE)(秒)
     TIME_RANGE = 0.5
     #マップの表示遅延時間(秒)
-    TIME_DELAY = 1.0
+    TIME_DELAY = 0.5
     while True:
         #指定した範囲の時間の座標をすべて取り出す
         point_list = person_handler.get_data(person_data, delay=TIME_DELAY, before_range=TIME_RANGE)
         map_img = person_map.clear_map_img()
         if point_list is not None:
-            cluster_list = person_cluster.get_cluster(point_list)
-            average_list, prod_list = person_cluster.get_average_and_prod_list(point_list, cluster_list)
-            map_img = person_map.get_map_img(point_list, cluster_list, average_list, prod_list, map_img)
+            # cluster処理（複数人対応）
+            # cluster_list = person_cluster.get_cluster(point_list)
+            # average_list, prod_list = person_cluster.get_average_and_prod_list(point_list, cluster_list)
+            # map_img = person_map.get_map_img(point_list, cluster_list, average_list, prod_list, map_img)
+            # 1人の検知のみ
+            average_location = person_cluster.get_normal_average(point_list)
+            interact_list, with_obj_list, action = person_handler.analize_data(point_list)
+            person_handler.write_data_to_csv('server_data.csv', time.time()-TIME_DELAY, average_location, action, interact_list, with_obj_list)
+            map_img = person_map.get_normal_map_img(average_location, map_img)
         cv2.imshow('server_map', map_img) 
         cv2.waitKey(1)
         time.sleep(RELOAD_INTERVAL)
