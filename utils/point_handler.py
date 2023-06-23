@@ -2,12 +2,27 @@ import numpy as np
 import time
 
 id_dict = {
-    0 : 'None',
-    1 : 'Holding Bottle',
-    2 : 'Drinking Bottle'
+    0 : ['none', 'none'],
+    1 : ['holding', 'bottle'],
+    2 : ['drinking', 'bottle'],
+    3 : ['holding', 'phone'],
+    4 : ['calling', 'phone'],
+    5 : ['holding', 'book'],
+    6 : ['reading', 'book'],
+    7 : ['Working', 'Computer']
 }
 
-name_dict = {value: key for key, value in id_dict.items()}
+name_dict = {
+    'None' : 0,
+    'Holding Bottle' : 1,
+    'Drinking' : 2,
+    'Holding Phone' : 3,
+    'Calling on Phone' : 4,
+    'Holding Book' : 5,
+    'Reading Book' : 6,
+    'Working on Computer' : 7,
+    'Holding Cushion' : 8
+}
 
 def id_to_name(id):
   global id_dict
@@ -36,7 +51,7 @@ def get_interact_weight(distance):
         return 0.61
     else:
         return 0.3
-    
+
 def get_interact_weight_for_list(distance_list):
     for i in range(distance_list.shape[0]):
         distance_list[i] = get_interact_weight(distance_list[i])
@@ -47,11 +62,16 @@ def get_location_weight(distance):
     rms = -2.5E-4 + 1.1904762E-4 * distance + 0.003761904762*(distance^2)
     return 1 - rms/distance
 
+import pandas as pd
+import csv
+
 #クライアント側でポイントデータを扱う際に使用
 class PointHandler:
-    def __init__(self, class_name):
+    def __init__(self, class_name, none_threshold=0.9):
         self.class_name = class_name
-        
+        self.threshold = none_threshold
+        self.file_exists = False
+
     def put_json_data(self, json_dic, data_list=None):
         if not isinstance(json_dic, dict):
             return data_list
@@ -84,7 +104,79 @@ class PointHandler:
             return None
         point_list = data_list[indices]
         return point_list
-    
+
+    def analize_data(self, data_list):
+        interact_list = []
+        with_obj_list = []
+        action = None
+        data_amount = max(0, int((data_list[0].shape[0]-4)/2))
+        for i in range(data_amount):
+            #しきい値の割合(0.9)以上がNoneだった場合、リストに追加しない(None処理)
+            if np.where(data_list[:,4+i*2] == 0).shape[0]/data_list.shape[0] > self.threshold:
+                continue
+            column_list = []
+            column_total = 0
+            #列にあるidをすべて取得
+            unique_ids = np.unique(data_list[:,4+i*2])
+            for id in unique_ids:
+                if id == 0:
+                    continue
+                id_data = data_list[data_list[:,4+i*2] == id]
+                id_total = np.sum(id_data[:, 5+i*2]*get_interact_weight_for_list(id_data[:,3]))
+                column_total += id_total
+                column_list.append([id, id_total])
+            max_id = 0
+            max_prob = 0
+            for data in column_list:
+                prob = data[1]/id_total
+                if max_prob < prob:
+                    max_prob = prob
+                    max_id = data[0]
+            class_data = id_to_name(max_id)
+            #最後にアクションデータが格納されている
+            if data_amount-1 == i:
+                action = class_data
+                continue
+            #インタラクションデータの場合は分けて格納
+            if class_data is None:
+                interact_list.append('NO CLASS')
+                with_obj_list.append('NO OBJ')
+            else:
+                interact_list.append(class_data[0])
+                with_obj_list.append(class_data[1])
+
+        return interact_list, with_obj_list, action
+
+
+    # def to_csv(self, path, time_stamp, average_loc, action, interact_list, with_obj_list):
+
+    #     df = pd.DataFrame({
+    #         'time' : time_stamp,
+    #         'x' : average_loc[0],
+    #         'z' : average_loc[1],
+    #         'action' : action,
+    #         'interact' : ",".join(map(str, interact_list)),
+    #         'with_obj' : ",".join(map(str, with_obj_list))
+    #     })
+    #     df.set_index('time')
+    #     df.to_csv(path, encoding='shift_jis')
+
+    def write_data_to_csv(self, file_path, time_stamp, average_loc, action, interact_list, with_obj_list):
+        # CSVファイルが存在しない場合に新しいファイルを作成する
+        if not self.file_exists:
+            try:
+                with open(file_path, 'r'):
+                    self.file_exists = True
+            except FileNotFoundError:
+                pass
+        with open(file_path, 'a', newline='') as file:
+            writer = csv.writer(file)
+            # ファイルが存在しなかった場合はヘッダーを書き込む
+            if not self.file_exists:
+                writer.writerow(['time', 'x', 'z' 'action', 'interact', 'with_obj'])  # ヘッダーの内容を適宜変更
+            # データを書き込む
+            writer.writerow([time_stamp, average_loc[0], average_loc[1], action, ",".join(map(str, interact_list)), ",".join(map(str, with_obj_list))])
+
 import math
 
 class Point:
@@ -99,7 +191,7 @@ class Point:
         if(id is None):
             return
         self.prod_list.append([id, probability])
-    
+
     def get_json(self):
         return {
             'x' : self.x,
@@ -107,7 +199,7 @@ class Point:
             'd' : self.distance,
             'probs' : self.prod_list
         }
-    
+
     def convert_location(self, X=0, Z=0, THETA=0, PITCH=0):
         self.z *= math.cos(PITCH)
         if X == 0 and Z == 0:
@@ -125,9 +217,9 @@ class Cluster:
         if point_list is None:
             return
         if point_list.shape[0] == 0:
-            return 
+            return
         return self.dbscan.fit_predict(point_list[:,1:3])
-    
+
     def get_average_and_prod_list(self, point_list, cluster_list):
         if point_list is None or cluster_list is None:
             return None
@@ -149,7 +241,12 @@ class Cluster:
                         column_list.append([id, average])
                 prod_list.append(column_list)
         return average_list, prod_list
-    
+
+    def get_normal_average(self, point_list):
+        if point_list is None:
+            return None
+        return np.mean(point_list[:,1:3], axis=0)
+
 import cv2
 
 class PointMap:
@@ -180,6 +277,13 @@ class PointMap:
             cv2.putText(map_img, str(prob_list[avg_id]), center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
             avg_id += 1
         return map_img
-    
+
+    def get_normal_map_img(self, average_loc, map_img):
+        if average_loc is None:
+            return map_img
+        center = (int((average_loc[1]/self.z_range)*self.width),int(((average_loc[0]/self.x_range)+1)*(self.height/2)))
+        cv2.circle(map_img, center, 3, (0,0,255), thickness=-1)
+        return map_img
+
     def clear_map_img(self):
         return cv2.cvtColor((np.zeros((self.height, self.width), np.uint8)+255), cv2.COLOR_GRAY2BGR)
