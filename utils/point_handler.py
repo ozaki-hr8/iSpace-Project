@@ -9,7 +9,13 @@ id_dict = {
     4 : ['calling', 'phone'],
     5 : ['holding', 'book'],
     6 : ['reading', 'book'],
-    7 : ['Working', 'Computer']
+    7 : ['working', 'computer'],
+    8 : ['holding', 'cushion'],
+
+    100 : ['standing', 'none'],
+    101 : ['sitting', 'none'],
+    102 : ['laying', 'none'],
+    103 : ['walking', 'none']
 }
 
 name_dict = {
@@ -21,7 +27,12 @@ name_dict = {
     'Holding Book' : 5,
     'Reading Book' : 6,
     'Working on Computer' : 7,
-    'Holding Cushion' : 8
+    'Holding Cushion' : 8,
+
+    'Standing' : 100,
+    'Sitting' : 101,
+    'Laying' : 102,
+    'Walking' : 103
 }
 
 def id_to_name(id):
@@ -133,15 +144,17 @@ class PointHandler:
                     max_prob = prob
                     max_id = data[0]
             class_data = id_to_name(max_id)
-            #最後にアクションデータが格納されている
-            if data_amount-1 == i:
-                action = class_data
-                continue
             #インタラクションデータの場合は分けて格納
             if class_data is None:
+                if data_amount-1 == i:
+                    action = 'NO CLASS'
+                    continue
                 interact_list.append('NO CLASS')
                 with_obj_list.append('NO OBJ')
             else:
+                if data_amount-1 == i:
+                    action = class_data[0]
+                    continue
                 interact_list.append(class_data[0])
                 with_obj_list.append(class_data[1])
 
