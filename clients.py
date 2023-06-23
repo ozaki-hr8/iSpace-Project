@@ -17,7 +17,7 @@ PITCH = 0
 
 #マップ生成サーバーのIP,ポート
 CONNECT = True  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
-SERVER_IP = "127.0.0.5"
+SERVER_IP = "172.31.176.218"
 SERVER_PORT = 55580
 #----------------------------------------------------------------------------------------
 
@@ -55,14 +55,14 @@ import math
 
 with open('pkl/action_3d.pkl', 'rb') as f0:
     model_action = pickle.load(f0)
-with open('pkl/cellphone_3d.pkl', 'rb') as f1:
-    model_cellphone = pickle.load(f1)
+# with open('pkl/cellphone_3d.pkl', 'rb') as f1:
+#     model_cellphone = pickle.load(f1)
 with open('pkl/bottle_3d.pkl', 'rb') as f2:
     model_bottle = pickle.load(f2)
 with open('pkl/book_3d.pkl', 'rb') as f3:
     model_book = pickle.load(f3)
-with open('pkl/keyboard_3d.pkl', 'rb') as f4:
-    model_keyboard = pickle.load(f4)
+# with open('pkl/keyboard_3d.pkl', 'rb') as f4:
+#     model_keyboard = pickle.load(f4)
 
 def get_distance(x1, y1, x2, y2):
     d = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
@@ -109,6 +109,7 @@ def add_location_data(data_dict, data_name, point):
         data_dict[data_name].append(point.get_json())
     else:
         data_dict[data_name] = [point.get_json()]
+    return data_dict
 
 @torch.no_grad()
 def run(weights='yolov5s.pt',  # model.pt path(s)
@@ -236,9 +237,9 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
 
         interaction_class= model_var.predict(X)[0]
         interaction_prob = model_var.predict_proba(X)[0]
-        if(interaction_class!="None"):
-            interaction_class_out.append(model_var.predict(X)[0])
-            interaction_prob_out.append(round(interaction_prob[np.argmax(interaction_prob)],2))
+        # if(interaction_class!="None"):
+        interaction_class_out.append(model_var.predict(X)[0])
+        interaction_prob_out.append(round(interaction_prob[np.argmax(interaction_prob)],2))
 
     def predict_action(model_var, results, wval, hval, coords_s_pre, distance_s, action_class, action_prob):
 
@@ -274,7 +275,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
     distance_s=[0 for i in range(132)]
     coords_s_pre=[0 for i in range(132)]
     with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
-        for path, depth, distance, depth_scale, img, im0s, vid_cap in dataset:
+        for path, depth, distance, depth_scale, img, im0s, vid_cap, color_intr in dataset:
             if onnx:
                 img = img.astype('float32')
             else:
@@ -362,31 +363,31 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             obj = rstlist[0]
                             hval = im0.shape[0]
                             wval = im0.shape[1]
-                            if obj == '0': 
+                            if obj == '9': #person
                                 x0 = float(xyxy[0]) / wval
                                 y0 = float(xyxy[1]) / hval
                                 w0 = float(xyxy[2] - xyxy[0]) / wval
                                 h0 = float(xyxy[3] - xyxy[1]) / hval
                                 z0 = round(dataset.depth_frame.get_distance(round(wval*(x0+w0/2)), round(hval*(y0+h0/2)))*100)
-                            if obj == '67': #cell phone      
+                            if obj == '3': #cellphone     
                                 x = float(xyxy[0]) / wval
                                 y = float(xyxy[1]) / hval
                                 w = float(xyxy[2] - xyxy[0]) / wval
                                 h = float(xyxy[3] - xyxy[1]) / hval
                                 z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
-                            if obj == '73': #book
+                            if obj == '0': #book
                                 x2 = float(xyxy[0]) / wval
                                 y2 = float(xyxy[1]) / hval
                                 w2 = float(xyxy[2] - xyxy[0]) / wval
                                 h2 = float(xyxy[3] - xyxy[1]) / hval
                                 z2 = round(dataset.depth_frame.get_distance(round(wval*(x2+w2/2)), round(hval*(y2+h2/2)))*100)
-                            if obj == '66': #keyboard
+                            if obj == '5': #keyboard
                                 x3 = float(xyxy[0]) / wval
                                 y3 = float(xyxy[1]) / hval
                                 w3 = float(xyxy[2] - xyxy[0]) / wval
                                 h3 = float(xyxy[3] - xyxy[1]) / hval
                                 z3 = round(dataset.depth_frame.get_distance(round(wval*(x3+w3/2)), round(hval*(y3+h3/2)))*100)
-                            if obj == '39': #cup
+                            if obj == '1': #bottle
                                 x4 = float(xyxy[0]) / wval
                                 y4 = float(xyxy[1]) / hval
                                 w4 = float(xyxy[2] - xyxy[0]) / wval
@@ -418,29 +419,35 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                                             mp_drawing.DrawingSpec(color=(245,66,230),thickness=2,circle_radius=2)
                                             )
                     try:
-                        # action_class, action_prob = predict_action(model_action,results, wval,hval,coords_s_pre, distance_s, action_class, action_prob)
-                        predict_interaction(x,y,z,w,h,model_cellphone,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        predict_interaction(x2,y2,w2,h2,model_book,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        predict_interaction(x3,y3,w3,h3,model_keyboard,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        predict_interaction(x4,y4,w4,h4,model_bottle,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        if(interaction_class_out):
-                            body_language_prob_all=max(interaction_prob_out)
-                            body_language_class_all=interaction_class_out[interaction_prob_out.index(max(interaction_prob_out))]
-                        im_x = round(wval*x+wval*w/2)
-                        im_y = round(hval*y+hval*h/2)
+                        data_dict={}
+                        action_class, action_prob = predict_action(model_action,results, wval,hval,coords_s_pre, distance_s, action_class, action_prob)
+                        # predict_interaction(x,y,z,w,h,model_cellphone,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        predict_interaction(x2,y2,z2,w2,h2,model_book,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        # predict_interaction(x3,y3,z3,w3,h3,model_keyboard,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        predict_interaction(x4,y4,z4,w4,h4,model_bottle,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        # if(interaction_class_out):
+                        #     body_language_prob_all=max(interaction_prob_out)
+                        #     body_language_class_all=interaction_class_out[interaction_prob_out.index(max(interaction_prob_out))]
+                        im_x = round(wval*x0+wval*w0/2)
+                        im_y = round(hval*y0+hval*h0/2)
+                        print(im_x, im_y)
+                        print(interaction_class_out)
                         location_3d = get_3d_location(color_intr, dataset.depth_frame, im_x, im_y)
+                        print(location_3d)
                         if location_3d is not None:
+                            print("a")
                             #マップ生成サーバーに座標を送信
                             point = Point(location_3d[0], location_3d[2])
                             #add_probabilityでobjectごとのインタラクションとその確率を追加
+                            # point.add_probability("None", 0.92)
                             point.add_probability(interaction_class_out[0], interaction_prob_out[0])
-                            point.add_probability(interaction_class_out[0], interaction_prob_out[0])
-                            point.add_probability(interaction_class_out[0], interaction_prob_out[0])
-                            point.add_probability(interaction_class_out[0], interaction_prob_out[0])
+                            # point.add_probability("None", 0.92)
+                            point.add_probability(interaction_class_out[1], interaction_prob_out[1])
+                            point.add_probability(action_class, action_prob)
                             #座標系変換
                             point.convert_location(X,Z,THETA,PITCH)
-                            add_location_data(data_dict, 'person', point)
-                            cv2.circle(im0, (im_x, im_y), 3, (0, 0, 255), thickness=-1)
+                            data_dict = add_location_data(data_dict, 'person', point)
+                            cv2.circle(im0, (im_x, im_y), 10, (0, 0, 255), thickness=-1)
                             map_view(location_3d)
                             print(location_3d)
                         if CONNECT:

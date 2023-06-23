@@ -38,14 +38,14 @@ import math
 
 with open('pkl/action_3d.pkl', 'rb') as f0:
     model_action = pickle.load(f0)
-with open('pkl/cellphone_3d.pkl', 'rb') as f1:
-    model_cellphone = pickle.load(f1)
-with open('pkl/bottle_3d.pkl', 'rb') as f2:
-    model_bottle = pickle.load(f2)
-with open('pkl/book_3d.pkl', 'rb') as f3:
-    model_book = pickle.load(f3)
-with open('pkl/keyboard_3d.pkl', 'rb') as f4:
-    model_keyboard = pickle.load(f4)
+# with open('pkl/cellphone_3d.pkl', 'rb') as f1:
+#     model_cellphone = pickle.load(f1)
+# with open('pkl/bottle_3d.pkl', 'rb') as f2:
+#     model_bottle = pickle.load(f2)
+# with open('pkl/book_3d.pkl', 'rb') as f3:
+#     model_book = pickle.load(f3)
+# with open('pkl/keyboard_3d.pkl', 'rb') as f4:
+#     model_keyboard = pickle.load(f4)
 
 def get_distance(x1, y1, x2, y2):
     d = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
@@ -218,10 +218,11 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
     if pt and device.type != 'cpu':
         model(torch.zeros(1, 3, *imgsz).to(device).type_as(next(model.parameters())))  # run once
     t0 = time.time()
+
     distance_s=[0 for i in range(132)]
     coords_s_pre=[0 for i in range(132)]
     with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
-        for path, depth, distance, depth_scale, img, im0s, vid_cap in dataset:
+        for path, depth, distance, depth_scale, img, im0s, vid_cap, color_intr in dataset:
             if onnx:
                 img = img.astype('float32')
             else:
@@ -307,31 +308,31 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             obj = rstlist[0]
                             hval = im0.shape[0]
                             wval = im0.shape[1]
-                            if obj == '0': 
-                                x0 = float(xyxy[0]) / wval
-                                y0 = float(xyxy[1]) / hval
-                                w0 = float(xyxy[2] - xyxy[0]) / wval
-                                h0 = float(xyxy[3] - xyxy[1]) / hval
-                                z0 = round(dataset.depth_frame.get_distance(round(wval*(x0+w0/2)), round(hval*(y0+h0/2)))*100)
-                            if obj == '67': #cell phone      
-                                x = float(xyxy[0]) / wval
-                                y = float(xyxy[1]) / hval
-                                w = float(xyxy[2] - xyxy[0]) / wval
-                                h = float(xyxy[3] - xyxy[1]) / hval
-                                z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
-                            if obj == '73': #book
+                            # if obj == '9': 
+                            #     x0 = float(xyxy[0]) / wval
+                            #     y0 = float(xyxy[1]) / hval
+                            #     w0 = float(xyxy[2] - xyxy[0]) / wval
+                            #     h0 = float(xyxy[3] - xyxy[1]) / hval
+                            #     z0 = round(dataset.depth_frame.get_distance(round(wval*(x0+w0/2)), round(hval*(y0+h0/2)))*100)
+                            # if obj == '3': #cell phone      
+                            #     x = float(xyxy[0]) / wval
+                            #     y = float(xyxy[1]) / hval
+                            #     w = float(xyxy[2] - xyxy[0]) / wval
+                            #     h = float(xyxy[3] - xyxy[1]) / hval
+                            #     z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
+                            if obj == '1': #bottle
                                 x2 = float(xyxy[0]) / wval
                                 y2 = float(xyxy[1]) / hval
                                 w2 = float(xyxy[2] - xyxy[0]) / wval
                                 h2 = float(xyxy[3] - xyxy[1]) / hval
                                 z2 = round(dataset.depth_frame.get_distance(round(wval*(x2+w2/2)), round(hval*(y2+h2/2)))*100)
-                            if obj == '66': #keyboard
+                            if obj == '0': #book
                                 x3 = float(xyxy[0]) / wval
                                 y3 = float(xyxy[1]) / hval
                                 w3 = float(xyxy[2] - xyxy[0]) / wval
                                 h3 = float(xyxy[3] - xyxy[1]) / hval
                                 z3 = round(dataset.depth_frame.get_distance(round(wval*(x3+w3/2)), round(hval*(y3+h3/2)))*100)
-                            if obj == '39': #cup
+                            if obj == '6': #keyboard
                                 x4 = float(xyxy[0]) / wval
                                 y4 = float(xyxy[1]) / hval
                                 w4 = float(xyxy[2] - xyxy[0]) / wval
@@ -363,14 +364,14 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                                             mp_drawing.DrawingSpec(color=(245,66,230),thickness=2,circle_radius=2)
                                             )
                     try:
-                        # action_class, action_prob = predict_action(model_action,results, wval,hval,coords_s_pre, distance_s, action_class, action_prob)
-                        predict_interaction(x,y,z,w,h,model_cellphone,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        # predict_interaction(x2,y2,w2,h2,model_book,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        # predict_interaction(x3,y3,w3,h3,model_keyboard,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        # predict_interaction(x4,y4,w4,h4,model_bottle,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        if(interaction_class_out):
-                            body_language_prob_all=max(interaction_prob_out)
-                            body_language_class_all=interaction_class_out[interaction_prob_out.index(max(interaction_prob_out))]
+                        action_class, action_prob = predict_action(model_action,results, wval,hval,coords_s_pre, distance_s, action_class, action_prob)
+                        # predict_interaction(x,y,z,w,h,model_cellphone,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        # predict_interaction(x2,y2,z2, w2,h2,model_book,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        # predict_interaction(x3,y3,w3,z3,h3,model_keyboard,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        # predict_interaction(x4,y4,z4,w4,h4,model_bottle,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        # if(interaction_class_out):
+                        #     body_language_prob_all=max(interaction_prob_out)
+                        #     body_language_class_all=interaction_class_out[interaction_prob_out.index(max(interaction_prob_out))]
                     except:
                         pass
 
@@ -378,27 +379,27 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                     im0 = cv2.copyMakeBorder(im0, 260, 0, 0, 0, cv2.BORDER_CONSTANT, value=[245, 117, 16])
 
                     # Display Class
-                    cv2.putText(im0, 'Interaction'
-                                , (155,22), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
-                    cv2.putText(im0, body_language_class_all
-                                , (150,90), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3, cv2.LINE_AA)
-
-                    # Display Probability
-                    cv2.putText(im0, 'Probability'
-                                , (15,22), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
-                    cv2.putText(im0, str(body_language_prob_all)
-                                , (10,90), cv2.FONT_HERSHEY_SIMPLEX, 1.7, (255, 255, 255), 3, cv2.LINE_AA)
-
-                    # cv2.putText(im0, 'Action'
-                    #             , (155,22+120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
-                    # cv2.putText(im0, action_class
-                    #             , (150,90+120), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3, cv2.LINE_AA)
+                    # cv2.putText(im0, 'Interaction'
+                    #             , (155,22), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
+                    # cv2.putText(im0, body_language_class_all
+                    #             , (150,90), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3, cv2.LINE_AA)
 
                     # # Display Probability
                     # cv2.putText(im0, 'Probability'
-                    #             , (15,22+120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
-                    # cv2.putText(im0, str(action_prob)
-                    #             , (10,90+120), cv2.FONT_HERSHEY_SIMPLEX, 1.7, (255, 255, 255), 3, cv2.LINE_AA)
+                    #             , (15,22), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
+                    # cv2.putText(im0, str(body_language_prob_all)
+                    #             , (10,90), cv2.FONT_HERSHEY_SIMPLEX, 1.7, (255, 255, 255), 3, cv2.LINE_AA)
+
+                    cv2.putText(im0, 'Action'
+                                , (155,22+120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
+                    cv2.putText(im0, action_class
+                                , (150,90+120), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3, cv2.LINE_AA)
+
+                    # Display Probability
+                    cv2.putText(im0, 'Probability'
+                                , (15,22+120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
+                    cv2.putText(im0, str(action_prob)
+                                , (10,90+120), cv2.FONT_HERSHEY_SIMPLEX, 1.7, (255, 255, 255), 3, cv2.LINE_AA)
 
                     cv2.imshow('mpYolo', im0)
                         # cv2.waitKey(1)  # 1 millisecond

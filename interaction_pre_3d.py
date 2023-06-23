@@ -45,12 +45,12 @@ mp_holistic =  mp.solutions.holistic
 #Botttle
 # class_name ="Holding Bottle"
 # class_name ="Drinking"
-# class_name ="None"
+class_name ="None"
 
 #Phone
 # class_name ="Holding Phone"
 # class_name ="Calling on Phone"
-class_name ="None"
+# class_name ="None"
 
 #Keybord
 # class_name ="Working on Computer"
@@ -159,7 +159,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
     distance_s=[0 for i in range(132)]
     coords_s_pre=[0 for i in range(132)]
     with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
-        for path, depth, distance, depth_scale, img, im0s, vid_cap in dataset:
+        for path, depth, distance, depth_scale, img, im0s, vid_cap, color_intr in dataset:
             if onnx:
                 img = img.astype('float32')
             else:
@@ -243,38 +243,46 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             # print(rstlist)
                             hval = im0.shape[0]
                             wval = im0.shape[1]
-                            if obj == '67': #cell phone
-                                x = float(xyxy[0]) / wval
-                                y = float(xyxy[1]) / hval
-                                w = float(xyxy[2] - xyxy[0]) / wval
-                                h = float(xyxy[3] - xyxy[1]) / hval
-                                z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
-                            # if obj == '73': #book
+                            # if obj == '3': #cell phone
                             #     x = float(xyxy[0]) / wval
                             #     y = float(xyxy[1]) / hval
                             #     w = float(xyxy[2] - xyxy[0]) / wval
                             #     h = float(xyxy[3] - xyxy[1]) / hval
                             #     z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
-                            # if obj == '66': #keyboard
-                            #     x = float(xyxy[0]) / wval
-                            #     y = float(xyxy[1]) / hval
-                            #     w = float(xyxy[2] - xyxy[0]) / wval
-                            #     h3= float(xyxy[3] - xyxy[1]) / hval
-                            # if obj == '39': #bottle
+                            # if obj == '0': #book
                             #     x = float(xyxy[0]) / wval
                             #     y = float(xyxy[1]) / hval
                             #     w = float(xyxy[2] - xyxy[0]) / wval
                             #     h = float(xyxy[3] - xyxy[1]) / hval
-                            #hrcode
-
-                        if save_img or save_crop or view_img:  # Add bbox to image
+                            #     z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
+                            # if obj == '6': #keyboard
+                            #     x = float(xyxy[0]) / wval
+                            #     y = float(xyxy[1]) / hval
+                            #     w = float(xyxy[2] - xyxy[0]) / wval
+                            #     h = float(xyxy[3] - xyxy[1]) / hval
+                            #     z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
+                            if obj == '1': #bottle
+                                x = float(xyxy[0]) / wval
+                                y = float(xyxy[1]) / hval
+                                w = float(xyxy[2] - xyxy[0]) / wval
+                                h = float(xyxy[3] - xyxy[1]) / hval
+                                z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
+                            # if obj == '2': #carpet
+                            #     x = float(xyxy[0]) / wval
+                            #     y = float(xyxy[1]) / hval
+                            #     w = float(xyxy[2] - xyxy[0]) / wval
+                            #     h = float(xyxy[3] - xyxy[1]) / hval
+                            #     z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
+                            # if obj == '9': #carpet
+                            # 
+                if save_img or save_crop or view_img:  # Add bbox to image
                             c = int(cls)  # integer class
                             label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
                             im0 = plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_width=line_thickness)
                             if save_crop:
                                 save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
 
-                # Print time (inference + NMS)
+                                # Print time (inference + NMS)
                 print(f'{s}Done. ({t2 - t1:.3f}s)')
 
                 # Stream results
@@ -327,10 +335,10 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         row = coords_s+coords_human+coords_obj+shape_obj+distance_so+distance_s
                         row.insert(0,class_name)
 
-                        with open('training_csv/cellphone_3d.csv',mode='a' ,newline='') as f:
-                            # if(x!=0):
-                            csv_writer =csv.writer(f, delimiter=',',quotechar='"',quoting=csv.QUOTE_MINIMAL)
-                            csv_writer.writerow(row)
+                        with open('training_csv/bottle_3d.csv',mode='a' ,newline='') as f:
+                            if(x!=0 or class_name=='None'):
+                                csv_writer =csv.writer(f, delimiter=',',quotechar='"',quoting=csv.QUOTE_MINIMAL)
+                                csv_writer.writerow(row)
 
                     except:
                         pass
