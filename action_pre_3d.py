@@ -37,9 +37,10 @@ import pandas as pd
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic =  mp.solutions.holistic
 
-class_name ="Sitting"
+# class_name ="Sitting"
+# class_name ="Laying"
 # class_name ="Standing"
-# class_name ="Walking"
+class_name ="Walking"
 # class_name ="None"
 #hrcode
 
@@ -144,7 +145,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
     distance_s=[0 for i in range(132)]
     coords_s_pre=[0 for i in range(132)]
     with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
-        for path, depth, distance, depth_scale, img, im0s, vid_cap in dataset:
+        for path, depth, distance, depth_scale, img, im0s, vid_cap, color_intr in dataset:
             if onnx:
                 img = img.astype('float32')
             else:
