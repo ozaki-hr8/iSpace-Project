@@ -67,7 +67,7 @@ def map_view():
     #表示するマップの時間範囲(指定時間から-TIME_RANGE~TIME_RANGE)(秒)
     TIME_RANGE = 0.5
     #マップの表示遅延時間(秒)
-    TIME_DELAY = 1.0
+    TIME_DELAY = 0.5
     while True:
         #指定した範囲の時間の座標をすべて取り出す
         point_list = person_handler.get_data(person_data, delay=TIME_DELAY, before_range=TIME_RANGE)

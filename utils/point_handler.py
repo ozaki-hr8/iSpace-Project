@@ -123,7 +123,7 @@ class PointHandler:
         data_amount = max(0, int((data_list[0].shape[0]-4)/2))
         for i in range(data_amount):
             #しきい値の割合(0.9)以上がNoneだった場合、リストに追加しない(None処理)
-            if np.where(data_list[:,4+i*2] == 0).shape[0]/data_list.shape[0] > self.threshold:
+            if np.where(data_list[:,4+i*2] == 0)[0].shape[0]/data_list.shape[0] > self.threshold:
                 continue
             column_list = []
             column_total = 0
@@ -186,7 +186,7 @@ class PointHandler:
             writer = csv.writer(file)
             # ファイルが存在しなかった場合はヘッダーを書き込む
             if not self.file_exists:
-                writer.writerow(['time', 'x', 'z' 'action', 'interact', 'with_obj'])  # ヘッダーの内容を適宜変更
+                writer.writerow(['time', 'x', 'z', 'action', 'interact', 'with_obj'])  # ヘッダーの内容を適宜変更
             # データを書き込む
             writer.writerow([time_stamp, average_loc[0], average_loc[1], action, ",".join(map(str, interact_list)), ",".join(map(str, with_obj_list))])
 
