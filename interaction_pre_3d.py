@@ -158,8 +158,17 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
 
     distance_s=[0 for i in range(132)]
     coords_s_pre=[0 for i in range(132)]
+    wait_frame = 0
     with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
         for path, depth, distance, depth_scale, img, im0s, vid_cap, color_intr in dataset:
+            imt = im0s[0].copy()
+            im_pose =cv2.cvtColor(imt, cv2.COLOR_BGR2RGB)
+            results = holistic.process(im_pose)
+            if wait_frame < 3 and view_img:
+                wait_frame += 1
+                continue
+            else:
+                wait_frame = 0
             if onnx:
                 img = img.astype('float32')
             else:
@@ -290,9 +299,9 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                 #hrcode
 
                 if view_img:
-                    im0 =cv2.cvtColor(im0, cv2.COLOR_BGR2RGB)
-                    results = holistic.process(im0)
-                    im0 = cv2.cvtColor(im0, cv2.COLOR_RGB2BGR)
+                    # im0 =cv2.cvtColor(im0, cv2.COLOR_BGR2RGB)
+                    # results = holistic.process(im0)
+                    # im0 = cv2.cvtColor(im0, cv2.COLOR_RGB2BGR)
                     mp_drawing.draw_landmarks(im0,results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
                                             mp_drawing.DrawingSpec(color=(245,117,66),thickness=2,circle_radius=4),
                                             mp_drawing.DrawingSpec(color=(245,66,230),thickness=2,circle_radius=2)
