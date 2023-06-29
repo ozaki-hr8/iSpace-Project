@@ -339,7 +339,8 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             if classify:
                 pred = apply_classifier(pred, modelc, img, im0s)
 
-            det_target_list = []
+            #[obj, x, y, z, w, h, prob]
+            box_list = np.empty((0,6), float)
 
             # Process predictions
             for i, det in enumerate(pred):  # detections per image
@@ -381,6 +382,12 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             obj = rstlist[0]
                             hval = im0.shape[0]
                             wval = im0.shape[1]
+                            x = float(xyxy[0]) / wval
+                            y = float(xyxy[1]) / hval
+                            w = float(xyxy[2] - xyxy[0]) / wval
+                            h = float(xyxy[3] - xyxy[1]) / hval
+                            z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
+                            box_list = np.append(box_list, np.array([[obj,x,y,z,w,h]], axis=0))
                             if obj == '0': #person
                                 x0 = float(xyxy[0]) / wval
                                 y0 = float(xyxy[1]) / hval
