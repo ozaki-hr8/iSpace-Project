@@ -5,7 +5,7 @@ import socket
 import json
 
 #カメラ位置推定サーバーのIP,ポート
-SERVER_IP = "172.31.183.119"
+SERVER_IP = "172.31.177.51"
 SERVER_PORT = 55580
 
 #realsense設定
