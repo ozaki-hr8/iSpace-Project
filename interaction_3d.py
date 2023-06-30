@@ -40,8 +40,8 @@ with open('pkl/action_3d.pkl', 'rb') as f0:
     model_action = pickle.load(f0)
 # with open('pkl/cellphone_3d.pkl', 'rb') as f1:
 #     model_cellphone = pickle.load(f1)
-# with open('pkl/bottle_3d.pkl', 'rb') as f2:
-#     model_bottle = pickle.load(f2)
+with open('pkl/bottle_3d.pkl', 'rb') as f2:
+    model_bottle = pickle.load(f2)
 # with open('pkl/book_3d.pkl', 'rb') as f3:
 #     model_book = pickle.load(f3)
 # with open('pkl/keyboard_3d.pkl', 'rb') as f4:
@@ -222,7 +222,16 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
     distance_s=[0 for i in range(132)]
     coords_s_pre=[0 for i in range(132)]
     with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+        wait_frame = 0
         for path, depth, distance, depth_scale, img, im0s, vid_cap, color_intr in dataset:
+            imt = im0s[0].copy()
+            im_pose =cv2.cvtColor(imt, cv2.COLOR_BGR2RGB)
+            results = holistic.process(im_pose)
+            if wait_frame < 3 and view_img:
+                wait_frame += 1
+                continue
+            else:
+                wait_frame = 0
             if onnx:
                 img = img.astype('float32')
             else:
@@ -320,7 +329,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             #     w = float(xyxy[2] - xyxy[0]) / wval
                             #     h = float(xyxy[3] - xyxy[1]) / hval
                             #     z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
-                            if obj == '1': #bottle
+                            if obj == '6': #bottle
                                 x2 = float(xyxy[0]) / wval
                                 y2 = float(xyxy[1]) / hval
                                 w2 = float(xyxy[2] - xyxy[0]) / wval
@@ -332,7 +341,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                                 w3 = float(xyxy[2] - xyxy[0]) / wval
                                 h3 = float(xyxy[3] - xyxy[1]) / hval
                                 z3 = round(dataset.depth_frame.get_distance(round(wval*(x3+w3/2)), round(hval*(y3+h3/2)))*100)
-                            if obj == '6': #keyboard
+                            if obj == '1': #keyboard
                                 x4 = float(xyxy[0]) / wval
                                 y4 = float(xyxy[1]) / hval
                                 w4 = float(xyxy[2] - xyxy[0]) / wval
@@ -356,9 +365,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                     action_class, action_prob, interaction_class_out, interaction_prob_out, body_language_class_all, body_language_prob_all= "None",  0.0, [], [], "None", 0.0
                     hval = im0.shape[0]
                     wval = im0.shape[1]
-                    im0 =cv2.cvtColor(im0, cv2.COLOR_BGR2RGB)
-                    results = holistic.process(im0)
-                    im0 = cv2.cvtColor(im0, cv2.COLOR_RGB2BGR)
                     mp_drawing.draw_landmarks(im0,results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
                                             mp_drawing.DrawingSpec(color=(245,117,66),thickness=2,circle_radius=4),
                                             mp_drawing.DrawingSpec(color=(245,66,230),thickness=2,circle_radius=2)
@@ -368,10 +374,10 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         # predict_interaction(x,y,z,w,h,model_cellphone,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
                         # predict_interaction(x2,y2,z2, w2,h2,model_book,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
                         # predict_interaction(x3,y3,w3,z3,h3,model_keyboard,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        # predict_interaction(x4,y4,z4,w4,h4,model_bottle,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        # if(interaction_class_out):
-                        #     body_language_prob_all=max(interaction_prob_out)
-                        #     body_language_class_all=interaction_class_out[interaction_prob_out.index(max(interaction_prob_out))]
+                        predict_interaction(x4,y4,z4,w4,h4,model_bottle,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        if(interaction_class_out):
+                            body_language_prob_all=max(interaction_prob_out)
+                            body_language_class_all=interaction_class_out[interaction_prob_out.index(max(interaction_prob_out))]
                     except:
                         pass
 
@@ -379,16 +385,16 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                     im0 = cv2.copyMakeBorder(im0, 260, 0, 0, 0, cv2.BORDER_CONSTANT, value=[245, 117, 16])
 
                     # Display Class
-                    # cv2.putText(im0, 'Interaction'
-                    #             , (155,22), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
-                    # cv2.putText(im0, body_language_class_all
-                    #             , (150,90), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3, cv2.LINE_AA)
+                    cv2.putText(im0, 'Interaction'
+                                , (155,22), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
+                    cv2.putText(im0, body_language_class_all
+                                , (150,90), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3, cv2.LINE_AA)
 
-                    # # Display Probability
-                    # cv2.putText(im0, 'Probability'
-                    #             , (15,22), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
-                    # cv2.putText(im0, str(body_language_prob_all)
-                    #             , (10,90), cv2.FONT_HERSHEY_SIMPLEX, 1.7, (255, 255, 255), 3, cv2.LINE_AA)
+                    # Display Probability
+                    cv2.putText(im0, 'Probability'
+                                , (15,22), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
+                    cv2.putText(im0, str(body_language_prob_all)
+                                , (10,90), cv2.FONT_HERSHEY_SIMPLEX, 1.7, (255, 255, 255), 3, cv2.LINE_AA)
 
                     cv2.putText(im0, 'Action'
                                 , (155,22+120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
