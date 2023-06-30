@@ -208,41 +208,43 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
     def predict_interaction(x_var, y_var, z_var, w_var, h_var, model_var, results, wval, hval, coords_s_pre, distance_s, interaction_class_out, interaction_prob_out):
         interaction_class = "None"
         interaction_prob = (0,0,0)
+        try:
+            pose = results.pose_landmarks.landmark
+            coords_s = list(np.array([[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose]).flatten())
+            coords_obj=list(np.array([x_var, y_var, z_var]).flatten())
+            shape_obj=list(np.array([w_var, h_var]).flatten())
+            
+            for rpi in range (4,132):
+                rpj=0 if rpi%4==0 else 1 if rpi%4==1 else 2 if rpi%4==2 else 3
+                if rpj!=3:
+                    coords_s[rpi]=coords_s[rpj]-coords_s[rpi]
+            distance_so= list()
+            for landmark in pose:
+                pose_2d=np.array([landmark.x,landmark.y])
+                object_2d=np.array([float(x_var+w_var/2), float(y_var+h_var/2)])
+                distance_so.append(np.linalg.norm(pose_2d-object_2d))
+            nosex = round(wval*pose[mp_holistic.PoseLandmark.NOSE.value].x)
+            nosey = round(hval*pose[mp_holistic.PoseLandmark.NOSE.value].y)
+            nosez = round(dataset.depth_frame.get_distance(nosex, nosey)*100)
+            coords_human = [nosex, nosey, nosez]
 
-        pose = results.pose_landmarks.landmark
-        coords_s = list(np.array([[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose]).flatten())
-        coords_obj=list(np.array([x_var, y_var, z_var]).flatten())
-        shape_obj=list(np.array([w_var, h_var]).flatten())
-        
-        for rpi in range (4,132):
-            rpj=0 if rpi%4==0 else 1 if rpi%4==1 else 2 if rpi%4==2 else 3
-            if rpj!=3:
-                coords_s[rpi]=coords_s[rpj]-coords_s[rpi]
-        distance_so= list()
-        for landmark in pose:
-            pose_2d=np.array([landmark.x,landmark.y])
-            object_2d=np.array([float(x_var+w_var/2), float(y_var+h_var/2)])
-            distance_so.append(np.linalg.norm(pose_2d-object_2d))
-        nosex = round(wval*pose[mp_holistic.PoseLandmark.NOSE.value].x)
-        nosey = round(hval*pose[mp_holistic.PoseLandmark.NOSE.value].y)
-        nosez = round(dataset.depth_frame.get_distance(nosex, nosey)*100)
-        coords_human = [nosex, nosey, nosez]
+            # distance from previous frame pose landmark
+            for i4 in range (len(coords_s)):
+                distance_s[i4]=coords_s[i4]-coords_s_pre[i4]
+            coords_s[0]=coords_s[1]=coords_s[2]=0
+            row = coords_s+coords_human+coords_obj+shape_obj+distance_so+distance_s
+            X = pd.DataFrame([row])
 
-        # distance from previous frame pose landmark
-        for i4 in range (len(coords_s)):
-            distance_s[i4]=coords_s[i4]-coords_s_pre[i4]
-        coords_s[0]=coords_s[1]=coords_s[2]=0
-        row = coords_s+coords_human+coords_obj+shape_obj+distance_so+distance_s
-        X = pd.DataFrame([row])
-
-        interaction_class= model_var.predict(X)[0]
-        interaction_prob = model_var.predict_proba(X)[0]
-        # if(interaction_class!="None"):
-        interaction_class_out.append(model_var.predict(X)[0])
-        interaction_prob_out.append(round(interaction_prob[np.argmax(interaction_prob)],2))
+            interaction_class= model_var.predict(X)[0]
+            interaction_prob = model_var.predict_proba(X)[0]
+        except:
+            pass
+        finally:
+            # if(interaction_class!="None"):
+            interaction_class_out.append(interaction_class)
+            interaction_prob_out.append(round(interaction_prob[np.argmax(interaction_prob)],2))
 
     def predict_action(model_var, results, wval, hval, coords_s_pre, distance_s, action_class, action_prob):
-
         pose = results.pose_landmarks.landmark
         coords_s = list(np.array([[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose]).flatten())
         for rpi in range (4,132):
@@ -280,7 +282,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             imt = im0s[0].copy()
             im_pose =cv2.cvtColor(imt, cv2.COLOR_BGR2RGB)
             results = holistic.process(im_pose)
-            # 2画面表示する場合はコメントアウト
+            # 2画面表示しない場合はコメントアウト
             # im_pose =cv2.cvtColor(im_pose, cv2.COLOR_RGB2BGR)
             # mp_drawing.draw_landmarks(im_pose,results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
             #                              mp_drawing.DrawingSpec(color=(245,117,66),thickness=2,circle_radius=4),
@@ -339,15 +341,12 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             if classify:
                 pred = apply_classifier(pred, modelc, img, im0s)
 
-            #[obj, x, y, z, w, h, prob]
-            box_list = np.empty((0,6), float)
+            #[obj, x, y, z, w, h, conf]
+            box_list = np.empty((0,7), float)
 
             # Process predictions
             for i, det in enumerate(pred):  # detections per image
                 x=y=w=h=z=0
-                x2=y2=w2=h2=z2=0
-                x3=y3=w3=h3=z3=0
-                x4=y4=w4=h4=z4=0
                 if webcam:  # batch_size >= 1
                     p, s, im0, frame = path[i], f'{i}: ', im0s[i].copy(), dataset.count
                 else:
@@ -360,6 +359,8 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                 gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
                 imc = im0.copy() if save_crop else im0  # for save_crop
                 imt = im0.copy()
+                hval = im0.shape[0]
+                wval = im0.shape[1]
                 if len(det):
                     # Rescale boxes from img_size to im0 size
                     det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
@@ -380,45 +381,12 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             rst = ('%g ' * len(line)).rstrip() % line + '\n'
                             rstlist = rst.split()
                             obj = rstlist[0]
-                            hval = im0.shape[0]
-                            wval = im0.shape[1]
                             x = float(xyxy[0]) / wval
                             y = float(xyxy[1]) / hval
                             w = float(xyxy[2] - xyxy[0]) / wval
                             h = float(xyxy[3] - xyxy[1]) / hval
                             z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
-                            box_list = np.append(box_list, np.array([[obj,x,y,z,w,h]], axis=0))
-                            if obj == '0': #person
-                                x0 = float(xyxy[0]) / wval
-                                y0 = float(xyxy[1]) / hval
-                                w0 = float(xyxy[2] - xyxy[0]) / wval
-                                h0 = float(xyxy[3] - xyxy[1]) / hval
-                                z0 = round(dataset.depth_frame.get_distance(round(wval*(x0+w0/2)), round(hval*(y0+h0/2)))*100)
-                            if obj == '3': #cellphone     
-                                x = float(xyxy[0]) / wval
-                                y = float(xyxy[1]) / hval
-                                w = float(xyxy[2] - xyxy[0]) / wval
-                                h = float(xyxy[3] - xyxy[1]) / hval
-                                z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
-                            if obj == '0': #book
-                                x2 = float(xyxy[0]) / wval
-                                y2 = float(xyxy[1]) / hval
-                                w2 = float(xyxy[2] - xyxy[0]) / wval
-                                h2 = float(xyxy[3] - xyxy[1]) / hval
-                                z2 = round(dataset.depth_frame.get_distance(round(wval*(x2+w2/2)), round(hval*(y2+h2/2)))*100)
-                            if obj == '5': #keyboard
-                                x3 = float(xyxy[0]) / wval
-                                y3 = float(xyxy[1]) / hval
-                                w3 = float(xyxy[2] - xyxy[0]) / wval
-                                h3 = float(xyxy[3] - xyxy[1]) / hval
-                                z3 = round(dataset.depth_frame.get_distance(round(wval*(x3+w3/2)), round(hval*(y3+h3/2)))*100)
-                            if obj == '1': #bottle
-                                x4 = float(xyxy[0]) / wval
-                                y4 = float(xyxy[1]) / hval
-                                w4 = float(xyxy[2] - xyxy[0]) / wval
-                                h4 = float(xyxy[3] - xyxy[1]) / hval
-                                z4 = round(dataset.depth_frame.get_distance(round(wval*(x4+w4/2)), round(hval*(y4+h4/2)))*100)
-                            #hrcode
+                            box_list = np.append(box_list, np.array([[obj,x,y,z,w,h,conf.item()]]), axis=0)
 
                         if save_img or save_crop or view_img:  # Add bbox to image
                             c = int(cls)  # integer class
@@ -434,63 +402,85 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                 #hrcode
                 if view_img:
                     action_class, action_prob, interaction_class_out, interaction_prob_out, body_language_class_all, body_language_prob_all= "None",  0.0, [], [], "None", 0.0
-                    hval = im0.shape[0]
-                    wval = im0.shape[1]
-                    #前回の試行のために分けただけ、今はim_x,im_yさえあればOK
-                    left_x = round(wval*x0)
-                    right_x = round(wval*x0+wval*w0)
-                    upper_y = round(hval*y0)
-                    lower_y = round(hval*y0+hval*h0)
-                    im_x = round((left_x+right_x)/2)
-                    im_y = round((upper_y+lower_y)/2)
-                    # im_pose =cv2.cvtColor(imt, cv2.COLOR_BGR2RGB)
-                    # im_pose = im_pose[max(0,upper_y-20):min(lower_y+20,hval-1), max(0,left_x-20):min(right_x+20,wval-1)]
-                    # mul = 320 / (lower_y - upper_y)
-                    # im_pose = cv2.resize(im_pose, None, None, mul, mul)
-                    # results = holistic.process(im_pose)
-                    # im_pose =cv2.cvtColor(im_pose, cv2.COLOR_RGB2BGR)
                     #最後に取得したresultsをim0にプロット
-                    mp_drawing.draw_landmarks(im0,results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
-                                            mp_drawing.DrawingSpec(color=(245,117,66),thickness=2,circle_radius=4),
-                                            mp_drawing.DrawingSpec(color=(245,66,230),thickness=2,circle_radius=2)
-                                            )
-                    try:
-                        data_dict={}
-                        action_class, action_prob = predict_action(model_action,results, wval,hval,coords_s_pre, distance_s, action_class, action_prob)
-                        # predict_interaction(x,y,z,w,h,model_cellphone,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        predict_interaction(x2,y2,z2,w2,h2,model_book,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        # predict_interaction(x3,y3,z3,w3,h3,model_keyboard,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        predict_interaction(x4,y4,z4,w4,h4,model_bottle,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        # if(interaction_class_out):
-                        #     body_language_prob_all=max(interaction_prob_out)
-                        #     body_language_class_all=interaction_class_out[interaction_prob_out.index(max(interaction_prob_out))]
-                        print(im_x, im_y)
-                        print(interaction_class_out)
-                        location_3d = get_3d_location(color_intr, dataset.depth_frame, im_x, im_y)
-                        print(location_3d)
-                        if location_3d is not None:
-                            print("a")
-                            #マップ生成サーバーに座標を送信
-                            point = Point(location_3d[0], location_3d[2])
-                            #add_probabilityでobjectごとのインタラクションとその確率を追加
-                            # point.add_probability("None", 0.92)
-                            point.add_probability(interaction_class_out[0], interaction_prob_out[0])
-                            # point.add_probability("None", 0.92)
-                            point.add_probability(interaction_class_out[1], interaction_prob_out[1])
-                            point.add_probability(action_class, action_prob)
-                            #座標系変換
-                            point.convert_location(X,Z,THETA,PITCH)
-                            data_dict = add_location_data(data_dict, 'person', point)
-                            cv2.circle(im0, (im_x, im_y), 10, (0, 0, 255), thickness=-1)
-                            # depth_image = np.asanyarray(dataset.depth_frame.get_data())[upper_y:lower_y,left_x:right_x]
-                            # depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.02), cv2.COLORMAP_JET)
+                    if results:
+                        mp_drawing.draw_landmarks(im0,results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
+                                                mp_drawing.DrawingSpec(color=(245,117,66),thickness=2,circle_radius=4),
+                                                mp_drawing.DrawingSpec(color=(245,66,230),thickness=2,circle_radius=2)
+                                                )
 
-                            # #map_view(location_3d)
-                            # cv2.imshow('distance', depth_colormap)
-                        if CONNECT:
-                            send_location(data_dict, time.time())
+                    data_dict={}
+                    x0, y0 = 0, 0
+                    try:
+                        action_class, action_prob = predict_action(model_action,results, wval,hval,coords_s_pre, distance_s, action_class, action_prob)
                     except:
                         pass
+                    id_list = ['0', '3', '9', '99', '999']
+                    for obj_id in id_list:
+                        x, y, z, w, h = 0, 0, 0, 0, 0
+                        #確率が最大の物を1つ選択
+                        obj_list = box_list[np.where(box_list[:,0] == obj_id)]
+                        if obj_list.shape[0] > 0:
+                            obj_list = obj_list.astype(float)
+                            target_box = obj_list[np.where(obj_list[:,6] == np.max(obj_list[:,6]))]
+                            _, x, y, z, w, h, conf = target_box[0]
+                        if obj_id == id_list[0]:  #person
+                            x0, y0= x+w/2, y+h/2
+                            try:
+                                left_shoulder = results.pose_landmarks.landmark[11]
+                                right_shoulder = results.pose_landmarks.landmark[12]
+                                px, py = (left_shoulder.x+right_shoulder.x)/2, (left_shoulder.y+right_shoulder.y)/2
+                                if px > x and px < x+w and py > y and py < y+h:
+                                    x0 = px
+                                    y0 = py
+                                    # left_hip = results.pose_landmarks.landmark[23]
+                                    # right_hip = results.pose_landmarks.landmark[24]
+                                    # hx, hy = (left_hip.x+right_hip.x)/2, (left_hip.y+right_hip.y)/2
+                                    # x0 = (px+hx)/2
+                                    # y0 = (py+hy)/2
+                            except:
+                                pass
+                            finally:
+                                x0 = max(0, x0)
+                                x0 = min(1, x0)
+                                y0 = max(0, y0)
+                                y0 = min(1, y0)
+                                print(x0, y0)
+                        if obj_id == id_list[1] and False:  #cellphone 使用しない場合はTrueをFalseに
+                            predict_interaction(x,y,z,w,h,model_cellphone,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        if obj_id == id_list[2] and True:  #book 使用しない場合はTrueをFalseに
+                            predict_interaction(x,y,z,w,h,model_book,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        if obj_id == id_list[3] and False:  #keyboard 使用しない場合はTrueをFalseに
+                            predict_interaction(x,y,z,w,h,model_keyboard,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        if obj_id == id_list[4] and True:  #bottle 使用しない場合はTrueをFalseに
+                            predict_interaction(x,y,z,w,h,model_bottle,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+
+                    # if(interaction_class_out):
+                    #     body_language_prob_all=max(interaction_prob_out)
+                    #     body_language_class_all=interaction_class_out[interaction_prob_out.index(max(interaction_prob_out))]
+                    im_x = round(wval*x0)
+                    im_y = round(hval*y0)
+                    location_3d = get_3d_location(color_intr, dataset.depth_frame, im_x, im_y)
+                    print(location_3d)
+                    if location_3d is not None:
+                        #マップ生成サーバーに座標を送信
+                        point = Point(location_3d[0], location_3d[2])
+                        #add_probabilityでobjectごとのインタラクションとその確率を追加
+                        for class_out, prob_out in zip(interaction_class_out, interaction_prob_out):
+                            point.add_probability(class_out, prob_out)
+                        point.add_probability(action_class, action_prob)
+                        #座標系変換
+                        point.convert_location(X,Z,THETA,PITCH)
+                        data_dict = add_location_data(data_dict, 'person', point)
+                        cv2.circle(im0, (im_x, im_y), 10, (0, 0, 255), thickness=-1)
+                        # depth_image = np.asanyarray(dataset.depth_frame.get_data())[upper_y:lower_y,left_x:right_x]
+                        # depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.02), cv2.COLORMAP_JET)
+
+                        map_view(location_3d)
+                        # cv2.imshow('distance', depth_colormap)
+                        print(data_dict)
+                    if CONNECT:
+                        send_location(data_dict, time.time())
 
 
                     im0 = cv2.copyMakeBorder(im0, 260, 0, 0, 0, cv2.BORDER_CONSTANT, value=[245, 117, 16])
