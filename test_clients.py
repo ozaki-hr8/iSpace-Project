@@ -5,20 +5,23 @@ Usage:
     $ python path/to/detect.py --source path/to/img.jpg --weights yolov5s.pt --img 640
 """
 
+from utils.ip_handler import get_ip, get_port
+from utils.cam_mat_handler import get_x, get_z, get_theta, get_pitch
+
 #-------------------------------------map----------------------------------------------
 #座標変換用定数。predict_camera_locationで取得する(メインカメラについては、X,Y,THETA=0)
 # X = 3.682768768475109
 # Z = -2.6057855270816472
 # THETA = 4.749273148314835
-X = 3.636383510923642
-Z = -0.2077758949365421
-THETA = 5.5100281849973
-PITCH = 0
+X = get_x()
+Z = get_z()
+THETA = get_theta()
+PITCH = get_pitch()
 
 #マップ生成サーバーのIP,ポート
 CONNECT = False  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
-SERVER_IP = "172.31.177.51"
-SERVER_PORT = 55580
+SERVER_IP = get_ip()
+SERVER_PORT = get_port()
 
 CONTAIN_NO_BONE_DATA = False
 #----------------------------------------------------------------------------------------

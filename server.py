@@ -5,10 +5,11 @@ import time
 import numpy as np
 import cv2
 from utils.point_handler import PointHandler, Cluster, PointMap
+from utils.ip_handler import get_ip, get_port
 
 # 接続待ちするサーバのホスト名とポート番号を指定
-HOST = "172.31.176.218"
-PORT = 55580
+HOST = get_ip()
+PORT = get_port()
 
 #カメラ数
 CAMERA_AMOUNT = 5

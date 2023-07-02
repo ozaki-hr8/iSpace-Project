@@ -24,7 +24,6 @@ click_y = -1
 data_array = np.empty((0, 3), float)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 def main():
     #マップ生成サーバーへ接続
@@ -39,7 +38,10 @@ def main():
     try:
         while True:
             # フレーム取得
-            frames = pipeline.wait_for_frames()
+            try:
+                frames = pipeline.wait_for_frames()
+            except:
+                continue
             aligned_frames = align.process(frames)
             color_frame = aligned_frames.get_color_frame()
             depth_frame = aligned_frames.get_depth_frame()
