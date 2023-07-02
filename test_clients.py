@@ -10,15 +10,17 @@ Usage:
 # X = 3.682768768475109
 # Z = -2.6057855270816472
 # THETA = 4.749273148314835
-X = 0
-Z = 0
-THETA = 0
+X = 3.636383510923642
+Z = -0.2077758949365421
+THETA = 5.5100281849973
 PITCH = 0
 
 #マップ生成サーバーのIP,ポート
 CONNECT = False  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
-SERVER_IP = "172.31.176.218"
+SERVER_IP = "172.31.177.51"
 SERVER_PORT = 55580
+
+CONTAIN_NO_BONE_DATA = False
 #----------------------------------------------------------------------------------------
 
 import argparse
@@ -110,6 +112,35 @@ def add_location_data(data_dict, data_name, point):
     else:
         data_dict[data_name] = [point.get_json()]
     return data_dict
+
+def get_person_xy(person_list, results):
+    x, y = 0, 0
+    if person_list.shape[0] == 0:
+        return x,y
+    try:
+        left_shoulder = results.pose_landmarks.landmark[11]
+        right_shoulder = results.pose_landmarks.landmark[12]
+        x, y = (left_shoulder.x+right_shoulder.x)/2, (left_shoulder.y+right_shoulder.y)/2
+    except:
+        pass
+    finally:
+        if x == 0 and y == 0:
+            if CONTAIN_NO_BONE_DATA:
+                person_list = person_list.astype(float)
+                target_box = person_list[np.where(person_list[:,6] == np.max(person_list[:,6]))]
+                x, y = target_box[0][1:3]
+                w, h = target_box[0][4:6]
+                x += w/2
+                y += h/2
+        else:
+            data = np.where((x>=person_list[:,1]) & (y >= person_list[:,2]) & (x <= person_list[:,1]+person_list[:,4]) & (y <= person_list[:,2]+person_list[:,5]))
+            if data[0].shape[0] == 0:
+                x, y = 0, 0
+        x = min(1, x)
+        x = max(0, x)
+        y = min(1, y)
+        y = max(0, y)
+        return x, y
 
 @torch.no_grad()
 def run(weights='yolov5s.pt',  # model.pt path(s)
@@ -209,6 +240,8 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
         interaction_class = "None"
         interaction_prob = (0,0,0)
         try:
+            if x_var == 0 and y_var == 0:
+                raise
             pose = results.pose_landmarks.landmark
             coords_s = list(np.array([[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose]).flatten())
             coords_obj=list(np.array([x_var, y_var, z_var]).flatten())
@@ -385,7 +418,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             y = float(xyxy[1]) / hval
                             w = float(xyxy[2] - xyxy[0]) / wval
                             h = float(xyxy[3] - xyxy[1]) / hval
-                            z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
+                            z = dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))
                             box_list = np.append(box_list, np.array([[obj,x,y,z,w,h,conf.item()]]), axis=0)
 
                         if save_img or save_crop or view_img:  # Add bbox to image
@@ -410,42 +443,26 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                                                 )
 
                     data_dict={}
+                    location_3d = None
                     x0, y0 = 0, 0
                     try:
                         action_class, action_prob = predict_action(model_action,results, wval,hval,coords_s_pre, distance_s, action_class, action_prob)
                     except:
                         pass
-                    id_list = ['0', '3', '9', '99', '999']
+                    id_list = ['0', '3', '9', '99', '39']
                     for obj_id in id_list:
                         x, y, z, w, h = 0, 0, 0, 0, 0
                         #確率が最大の物を1つ選択
-                        obj_list = box_list[np.where(box_list[:,0] == obj_id)]
+                        obj_list = box_list[np.where(box_list[:,0] == obj_id)].astype(float)
                         if obj_list.shape[0] > 0:
-                            obj_list = obj_list.astype(float)
-                            target_box = obj_list[np.where(obj_list[:,6] == np.max(obj_list[:,6]))]
-                            _, x, y, z, w, h, conf = target_box[0]
+                            if location_3d:
+                                distance_list = (x0-obj_list[:,1]+obj_list[:,4]/2)**2+(y0-obj_list[:,2]+obj_list[:,5]/2)**2+(location_3d[2] - z)**2
+                                x, y, z, w, h = obj_list[np.where(distance_list[:] == np.min(distance_list))][0][1:6]
                         if obj_id == id_list[0]:  #person
-                            x0, y0= x+w/2, y+h/2
-                            try:
-                                left_shoulder = results.pose_landmarks.landmark[11]
-                                right_shoulder = results.pose_landmarks.landmark[12]
-                                px, py = (left_shoulder.x+right_shoulder.x)/2, (left_shoulder.y+right_shoulder.y)/2
-                                if px > x and px < x+w and py > y and py < y+h:
-                                    x0 = px
-                                    y0 = py
-                                    # left_hip = results.pose_landmarks.landmark[23]
-                                    # right_hip = results.pose_landmarks.landmark[24]
-                                    # hx, hy = (left_hip.x+right_hip.x)/2, (left_hip.y+right_hip.y)/2
-                                    # x0 = (px+hx)/2
-                                    # y0 = (py+hy)/2
-                            except:
-                                pass
-                            finally:
-                                x0 = max(0, x0)
-                                x0 = min(1, x0)
-                                y0 = max(0, y0)
-                                y0 = min(1, y0)
-                                print(x0, y0)
+                            x0, y0= get_person_xy(obj_list, results)
+                            location_3d = get_3d_location(color_intr, dataset.depth_frame, round(wval*x0), round(hval*y0))
+                            continue
+                        z = round(z*100)
                         if obj_id == id_list[1] and False:  #cellphone 使用しない場合はTrueをFalseに
                             predict_interaction(x,y,z,w,h,model_cellphone,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
                         if obj_id == id_list[2] and True:  #book 使用しない場合はTrueをFalseに
@@ -458,9 +475,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                     # if(interaction_class_out):
                     #     body_language_prob_all=max(interaction_prob_out)
                     #     body_language_class_all=interaction_class_out[interaction_prob_out.index(max(interaction_prob_out))]
-                    im_x = round(wval*x0)
-                    im_y = round(hval*y0)
-                    location_3d = get_3d_location(color_intr, dataset.depth_frame, im_x, im_y)
                     print(location_3d)
                     if location_3d is not None:
                         #マップ生成サーバーに座標を送信
@@ -472,11 +486,11 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         #座標系変換
                         point.convert_location(X,Z,THETA,PITCH)
                         data_dict = add_location_data(data_dict, 'person', point)
-                        cv2.circle(im0, (im_x, im_y), 10, (0, 0, 255), thickness=-1)
+                        cv2.circle(im0, (round(wval*x0), round(hval*y0)), 10, (0, 0, 255), thickness=-1)
                         # depth_image = np.asanyarray(dataset.depth_frame.get_data())[upper_y:lower_y,left_x:right_x]
                         # depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.02), cv2.COLORMAP_JET)
 
-                        map_view(location_3d)
+                        # map_view(location_3d)
                         # cv2.imshow('distance', depth_colormap)
                         print(data_dict)
                     if CONNECT:
