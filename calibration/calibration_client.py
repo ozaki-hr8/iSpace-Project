@@ -75,6 +75,8 @@ def main():
         cv2.destroyAllWindows()
 
 def receive_loop():
+    global sock
+    global sock2
     while True:
         try:
             conn, addr = sock2.accept()
@@ -89,6 +91,8 @@ def receive_loop():
         thread.start()
 
 def loop_handler(connection):
+    global sock
+    global sock2
     while True:
         try:
             #受信
