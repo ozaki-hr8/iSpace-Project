@@ -29,8 +29,6 @@ sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 def main():
     #マップ生成サーバーへ接続
     sock.connect((SERVER_IP, SERVER_PORT))
-    thread = threading.Thread(target=receive_loop, args=())
-    thread.start()
     #RealSenseの初期設定を行う
     align, config, pipeline, profile = realsense_setting()
     #RealSenseの内部パラメータを取得
@@ -73,39 +71,6 @@ def main():
     finally:
         pipeline.stop()
         cv2.destroyAllWindows()
-
-def receive_loop():
-    global sock
-    global sock2
-    while True:
-        try:
-            conn, addr = sock2.accept()
-        except KeyboardInterrupt:
-            sock.close()
-            sock2.close()
-            exit()
-            break
-        print("[アクセスを確認] => {}:{}".format(addr[0], addr[1]))
-        # スレッド作成
-        thread = threading.Thread(target=loop_handler, args=(conn, addr))
-        thread.start()
-
-def loop_handler(connection):
-    global sock
-    global sock2
-    while True:
-        try:
-            #受信
-            res = connection.recv(4096)
-            decoded = res.decode('utf-8')
-            if len(decoded) > 0:
-                print(decoded)
-        except Exception as e:
-            print(e)
-            break
-        finally:
-            sock.close()
-            sock2.close()
 
 #realsenseの初期設定を行う
 def realsense_setting():

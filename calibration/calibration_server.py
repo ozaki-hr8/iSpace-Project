@@ -89,9 +89,6 @@ def add_data(json_dic, address):
                 print('Z = '+str(dz))
                 source_data = np.empty((0, 2), float)
                 target_data = np.empty((0, 2), float)
-                sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock2.connect((target_ip[0], target_ip[1]))
-                sock2.send(f'x:{x}, z:{z}, t:{theta}'.encode("UTF-8"))
 
 #得た点の座標からカメラの角度を推定する
 def calc_theta():
