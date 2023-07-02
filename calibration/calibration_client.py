@@ -29,6 +29,8 @@ sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 def main():
     #マップ生成サーバーへ接続
     sock.connect((SERVER_IP, SERVER_PORT))
+    thread = threading.Thread(target=receive_loop, args=())
+    thread.start()
     #RealSenseの初期設定を行う
     align, config, pipeline, profile = realsense_setting()
     #RealSenseの内部パラメータを取得
