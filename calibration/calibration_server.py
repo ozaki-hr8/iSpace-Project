@@ -10,10 +10,11 @@ import threading
 import json
 import math
 import numpy as np
+from calib_ip_handler import get_ip, get_port
 
 # 接続待ちするサーバのホスト名とポート番号を指定
-HOST = "172.31.178.47"
-PORT = 55580
+HOST = get_ip()
+PORT = get_port()
 # マップにプロットする際のX,Y範囲(m)
 X_RANGE = 2.0
 Y_RANGE = 5.0
@@ -46,9 +47,9 @@ def main():
             break
         # アドレス確認
         if source_ip is None:
-            source_ip = addr[0]
+            source_ip = addr
         elif target_ip is None:
-            target_ip = addr[0]
+            target_ip = addr
         print("[アクセスを確認] => {}:{}".format(addr[0], addr[1]))
         # スレッド作成
         thread = threading.Thread(target=loop_handler, args=(conn, addr))
@@ -75,7 +76,7 @@ def add_data(json_dic, address):
         for loc in person_loc:
             x,z,w = loc.split(',')
             new_data = np.array([[x,z]], float)
-            if target_ip == address[0]:
+            if target_ip[0] == address[0]:
                 target_data = np.concatenate((target_data, new_data), axis=0)
             else:
                 source_data = np.concatenate((source_data, new_data), axis=0)
@@ -88,6 +89,9 @@ def add_data(json_dic, address):
                 print('Z = '+str(dz))
                 source_data = np.empty((0, 2), float)
                 target_data = np.empty((0, 2), float)
+                sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock2.connect((target_ip[0], target_ip[1]))
+                sock2.send(f'x:{x}, z:{z}, t:{theta}'.encode("UTF-8"))
 
 #得た点の座標からカメラの角度を推定する
 def calc_theta():

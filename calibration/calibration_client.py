@@ -3,10 +3,13 @@ import numpy as np
 import cv2
 import socket
 import json
+import threading
+
+from calib_ip_handler import get_ip, get_port
 
 #カメラ位置推定サーバーのIP,ポート
-SERVER_IP = "172.31.177.51"
-SERVER_PORT = 55580
+SERVER_IP = get_ip()
+SERVER_PORT = get_port()
 
 #realsense設定
 WIDTH = 640
@@ -21,6 +24,7 @@ click_y = -1
 data_array = np.empty((0, 3), float)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 def main():
     #マップ生成サーバーへ接続
@@ -67,6 +71,35 @@ def main():
     finally:
         pipeline.stop()
         cv2.destroyAllWindows()
+
+def receive_loop():
+    while True:
+        try:
+            conn, addr = sock2.accept()
+        except KeyboardInterrupt:
+            sock.close()
+            sock2.close()
+            exit()
+            break
+        print("[アクセスを確認] => {}:{}".format(addr[0], addr[1]))
+        # スレッド作成
+        thread = threading.Thread(target=loop_handler, args=(conn, addr))
+        thread.start()
+
+def loop_handler(connection):
+    while True:
+        try:
+            #受信
+            res = connection.recv(4096)
+            decoded = res.decode('utf-8')
+            if len(decoded) > 0:
+                print(decoded)
+        except Exception as e:
+            print(e)
+            break
+        finally:
+            sock.close()
+            sock2.close()
 
 #realsenseの初期設定を行う
 def realsense_setting():
