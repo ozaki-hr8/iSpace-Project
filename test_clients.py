@@ -19,7 +19,7 @@ THETA = get_theta()
 PITCH = get_pitch()
 
 #マップ生成サーバーのIP,ポート
-CONNECT = False  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
+CONNECT = True  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
 SERVER_IP = get_ip()
 SERVER_PORT = get_port()
 
@@ -60,8 +60,8 @@ import math
 
 with open('pkl/action_3d.pkl', 'rb') as f0:
     model_action = pickle.load(f0)
-# with open('pkl/cellphone_3d.pkl', 'rb') as f1:
-#     model_cellphone = pickle.load(f1)
+with open('pkl/cellphone_3d.pkl', 'rb') as f1:
+    model_cellphone = pickle.load(f1)
 with open('pkl/bottle_3d.pkl', 'rb') as f2:
     model_bottle = pickle.load(f2)
 with open('pkl/book_3d.pkl', 'rb') as f3:
@@ -452,7 +452,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         action_class, action_prob = predict_action(model_action,results, wval,hval,coords_s_pre, distance_s, action_class, action_prob)
                     except:
                         pass
-                    id_list = ['0', '3', '9', '99', '39']
+                    id_list = ['9', '3', '0', '6', '1']
                     for obj_id in id_list:
                         x, y, z, w, h = 0, 0, 0, 0, 0
                         #確率が最大の物を1つ選択
@@ -466,7 +466,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             location_3d = get_3d_location(color_intr, dataset.depth_frame, round(wval*x0), round(hval*y0))
                             continue
                         z = round(z*100)
-                        if obj_id == id_list[1] and False:  #cellphone 使用しない場合はTrueをFalseに
+                        if obj_id == id_list[1] and True:  #cellphone 使用しない場合はTrueをFalseに
                             predict_interaction(x,y,z,w,h,model_cellphone,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
                         if obj_id == id_list[2] and True:  #book 使用しない場合はTrueをFalseに
                             predict_interaction(x,y,z,w,h,model_book,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
@@ -475,9 +475,9 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         if obj_id == id_list[4] and True:  #bottle 使用しない場合はTrueをFalseに
                             predict_interaction(x,y,z,w,h,model_bottle,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
 
-                    # if(interaction_class_out):
-                    #     body_language_prob_all=max(interaction_prob_out)
-                    #     body_language_class_all=interaction_class_out[interaction_prob_out.index(max(interaction_prob_out))]
+                    if(interaction_class_out):
+                        body_language_prob_all=max(interaction_prob_out)
+                        body_language_class_all=interaction_class_out[interaction_prob_out.index(max(interaction_prob_out))]
                     print(location_3d)
                     if location_3d is not None:
                         #マップ生成サーバーに座標を送信
