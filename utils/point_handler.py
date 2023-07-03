@@ -274,8 +274,8 @@ class PointMap:
         self.z_range = z_range
         self.map_img = map_img
         if map_img is not None:
-            self.width = map_img.shape[0]
-            self.height = map_img.shape[1]
+            self.width = map_img.shape[1]
+            self.height = map_img.shape[0]
 
     def get_map_img(self, point_list, cluster_list, average_list, prob_list, map_img):
         PALE_COLORs = [(255,255,128),(255,128,255),(128,255,255),(255,192,192),(192,255,192),(192,192,255)]
@@ -299,11 +299,19 @@ class PointMap:
             avg_id += 1
         return map_img
 
-    def get_normal_map_img(self, average_loc, map_img):
+    def get_normal_map_img(self, average_loc, map_img, action_class, interaction_class):
         if average_loc is None:
             return map_img
         center = (int((average_loc[1]/self.z_range)*self.width),int(((average_loc[0]/self.x_range)+1)*(self.height/2)))
         cv2.circle(map_img, center, 3, (0,0,255), thickness=-1)
+        cv2.putText(map_img, str(action_class),
+                                   (center[0]+70,center[1]+10),
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA
+                                        )
+        cv2.putText(map_img, str(interaction_class),
+                                   (center[0]+70,center[1]-10),
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA
+                                        )
         return map_img
 
     def clear_map_img(self):
