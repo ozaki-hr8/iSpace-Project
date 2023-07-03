@@ -243,7 +243,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
         interaction_class = "None"
         interaction_prob = (0,0,0)
         try:
-            if x_var == 0 and y_var == 0:
+            if x_var == 0 and y_var == 0 or z_var == 0:
                 raise
             pose = results.pose_landmarks.landmark
             coords_s = list(np.array([[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose]).flatten())
