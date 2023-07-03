@@ -71,8 +71,8 @@ def map_view():
     #マップの表示遅延時間(秒)
     TIME_DELAY = 0.5
 
-    MOVE_X = 0
-    MOVE_Z = 0
+    MOVE_X = -1.63
+    MOVE_Z = 0.84
     MOVE_THETA = 0
 
     while True:

@@ -267,12 +267,15 @@ class Cluster:
 import cv2
 
 class PointMap:
-    def __init__(self, width=640, height=480, x_range=5.0, z_range=10.0, map_img=None):
+    def __init__(self, width=640, height=480, x_range=5.78, z_range=4.875, map_img=None):
         self.width = width
         self.height = height
         self.x_range = x_range
         self.z_range = z_range
         self.map_img = map_img
+        if map_img is not None:
+            self.width = map_img.shape[0]
+            self.height = map_img.shape[1]
 
     def get_map_img(self, point_list, cluster_list, average_list, prob_list, map_img):
         PALE_COLORs = [(255,255,128),(255,128,255),(128,255,255),(255,192,192),(192,255,192),(192,192,255)]
