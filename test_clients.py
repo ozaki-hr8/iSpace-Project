@@ -66,8 +66,8 @@ with open('pkl/bottle_3d.pkl', 'rb') as f2:
     model_bottle = pickle.load(f2)
 with open('pkl/book_3d.pkl', 'rb') as f3:
     model_book = pickle.load(f3)
-# with open('pkl/keyboard_3d.pkl', 'rb') as f4:
-#     model_keyboard = pickle.load(f4)
+with open('pkl/keyboard_3d.pkl', 'rb') as f4:
+    model_keyboard = pickle.load(f4)
 
 def get_distance(x1, y1, x2, y2):
     d = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
@@ -243,7 +243,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
         interaction_class = "None"
         interaction_prob = (0,0,0)
         try:
-            if x_var == 0 and y_var == 0:
+            if x_var == 0 and y_var == 0 or z_var == 0:
                 raise
             pose = results.pose_landmarks.landmark
             coords_s = list(np.array([[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose]).flatten())
@@ -470,7 +470,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             predict_interaction(x,y,z,w,h,model_cellphone,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
                         if obj_id == id_list[2] and True:  #book 使用しない場合はTrueをFalseに
                             predict_interaction(x,y,z,w,h,model_book,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
-                        if obj_id == id_list[3] and False:  #keyboard 使用しない場合はTrueをFalseに
+                        if obj_id == id_list[3] and True:  #keyboard 使用しない場合はTrueをFalseに
                             predict_interaction(x,y,z,w,h,model_keyboard,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
                         if obj_id == id_list[4] and True:  #bottle 使用しない場合はTrueをFalseに
                             predict_interaction(x,y,z,w,h,model_bottle,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
