@@ -305,11 +305,11 @@ class PointMap:
         center = (self.width-int(((average_loc[0]/self.x_range)+1)*(self.width/2)),int((average_loc[1]/self.z_range)*self.height))
         cv2.circle(map_img, center, 3, (0,0,255), thickness=-1)
         cv2.putText(map_img, str(action_class),
-                                   (center[0]+70,center[1]+10),
+                                   (center[0]+30,center[1]+10),
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA
                                         )
         cv2.putText(map_img, str(interaction_class),
-                                   (center[0]+70,center[1]-10),
+                                   (center[0]+30,center[1]-10),
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA
                                         )
         return map_img
