@@ -89,10 +89,10 @@ def map_view():
             average_location = person_cluster.get_normal_average(point_list)
             average_location[0] = -MOVE_X+average_location[0]*math.cos(MOVE_THETA)-average_location[1]*math.sin(MOVE_THETA)
             average_location[1] = -MOVE_Z+average_location[0]*math.sin(MOVE_THETA)+average_location[1]*math.cos(MOVE_THETA)
-            c_list = []
+            c_list = ''
             for cid, oid in zip(interact_list, with_obj_list):
-                if (cid !="none"):
-                    c_list.append(f'{cid} with {oid}')
+                if (cid !="none" and cid !="holding" and cid!="working"):
+                    c_list += f'{cid} with {oid} '
             map_img = person_map.get_normal_map_img(average_location, map_img,action, c_list)
             average_location[0] = round(average_location[0]*100)
             average_location[1] = round(average_location[1]*100)
