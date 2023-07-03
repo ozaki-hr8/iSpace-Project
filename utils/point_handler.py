@@ -302,7 +302,7 @@ class PointMap:
     def get_normal_map_img(self, average_loc, map_img, action_class, interaction_class):
         if average_loc is None:
             return map_img
-        center = (int((average_loc[1]/self.z_range)*self.width),int(((average_loc[0]/self.x_range)+1)*(self.height/2)))
+        center = (self.width-int(((average_loc[0]/self.x_range)+1)*(self.width/2)),int((average_loc[1]/self.z_range)*self.height))
         cv2.circle(map_img, center, 3, (0,0,255), thickness=-1)
         cv2.putText(map_img, str(action_class),
                                    (center[0]+70,center[1]+10),
