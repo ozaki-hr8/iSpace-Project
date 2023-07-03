@@ -18,7 +18,7 @@ CAMERA_AMOUNT = 5
 person_data = None
 person_handler = PointHandler('person')
 person_cluster = Cluster(eps=0.3, min_samples=5)
-person_map = PointMap()
+person_map = PointMap(map_img=cv2.imread("map.png"))
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
