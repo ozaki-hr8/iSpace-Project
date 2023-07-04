@@ -519,12 +519,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                     # cv2.putText(im0, action_class
                     #             , (150,90+120), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3, cv2.LINE_AA)
 
-                    cv2.putText(im0, 'Distance'
-                                , (155,22+120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
-                    if location_3d is not None:
-                        cv2.putText(im0, str(location_3d[2])
-                                    , (150,90+120), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3, cv2.LINE_AA)
-
                     # # Display Probability
                     # cv2.putText(im0, 'Probability'
                     #             , (15,22+120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
