@@ -11,6 +11,8 @@ id_dict = {
     6 : ['reading', 'book'],
     7 : ['working', 'computer'],
     8 : ['holding', 'cushion'],
+    9 : ['holding', 'food'],
+    10 : ['eating', 'food'],
 
     100 : ['standing', 'none'],
     101 : ['sitting', 'none'],
@@ -28,6 +30,8 @@ name_dict = {
     'Reading Book' : 6,
     'Working on Computer' : 7,
     'Holding Cushion' : 8,
+    'Holding Food' : 9,
+    'Eating' : 10,
 
     'Standing' : 100,
     'Sitting' : 101,

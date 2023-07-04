@@ -68,6 +68,11 @@ with open('pkl/book_3d.pkl', 'rb') as f3:
     model_book = pickle.load(f3)
 with open('pkl/keyboard_3d.pkl', 'rb') as f4:
     model_keyboard = pickle.load(f4)
+with open('pkl/cushion_3d.pkl', 'rb') as f4:
+    model_cushion = pickle.load(f4)
+with open('pkl/food_3d.pkl', 'rb') as f4:
+    model_food = pickle.load(f4)
+
 
 def get_distance(x1, y1, x2, y2):
     d = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
@@ -452,7 +457,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         action_class, action_prob = predict_action(model_action,results, wval,hval,coords_s_pre, distance_s, action_class, action_prob)
                     except:
                         pass
-                    id_list = ['9', '3', '0', '6', '1']
+                    id_list = ['9', '4', '1', '6', '2','5','0']
                     for obj_id in id_list:
                         x, y, z, w, h = 0, 0, 0, 0, 0
                         #確率が最大の物を1つ選択
@@ -474,6 +479,10 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             predict_interaction(x,y,z,w,h,model_keyboard,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
                         if obj_id == id_list[4] and True:  #bottle 使用しない場合はTrueをFalseに
                             predict_interaction(x,y,z,w,h,model_bottle,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        if obj_id == id_list[5] and True:  #cushion 使用しない場合はTrueをFalseに
+                            predict_interaction(x,y,z,w,h,model_cushion,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
+                        if obj_id == id_list[6] and True:  #food 使用しない場合はTrueをFalseに
+                            predict_interaction(x,y,z,w,h,model_food,results, wval,hval,coords_s_pre, distance_s, interaction_class_out, interaction_prob_out)
 
                     if(interaction_class_out):
                         body_language_prob_all=max(interaction_prob_out)
