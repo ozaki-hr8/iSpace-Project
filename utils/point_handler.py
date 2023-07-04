@@ -221,8 +221,9 @@ class Point:
         self.z *= math.cos(PITCH)
         if X == 0 and Z == 0:
             return
-        self.x = -X+self.x*math.cos(THETA)-self.z*math.sin(THETA)
+        temp_x = -X+self.x*math.cos(THETA)-self.z*math.sin(THETA)
         self.z = -Z+self.x*math.sin(THETA)+self.z*math.cos(THETA)
+        self.x = temp_x
 
 from sklearn.cluster import DBSCAN
 
@@ -263,6 +264,16 @@ class Cluster:
         if point_list is None:
             return None
         return np.mean(point_list[:,1:3], axis=0)
+    
+    def get_norm_average(self, point_list):
+        if point_list is None:
+            return None
+        distance_list = 10 - point_list[:,3]
+        distance_list[np.where(distance_list < 0)] = 0
+        norm = distance_list / np.sum(distance_list)
+        x = np.sum(point_list[:,1]*norm)
+        z = np.sum(point_list[:,2]*norm)
+        return np.array([x,z])
 
 import cv2
 
@@ -302,7 +313,11 @@ class PointMap:
     def get_normal_map_img(self, average_loc, map_img, action_class, interaction_class):
         if average_loc is None:
             return map_img
-        center = (self.width-int(((average_loc[0]/self.x_range)+1)*(self.width/2)),int((average_loc[1]/self.z_range)*self.height))
+        #   center = (self.width-int(((average_loc[0]/self.x_range)+1)*(self.width/2)),int((average_loc[1]/self.z_range)*self.height))
+        y = int((average_loc[1]/self.z_range)*self.height)
+        x = -int((average_loc[0]/self.x_range)*self.width)
+        center = (x, y)
+        print(center)
         cv2.circle(map_img, center, 3, (0,0,255), thickness=-1)
         cv2.putText(map_img, str(action_class),
                                    (center[0]+30,center[1]+10),

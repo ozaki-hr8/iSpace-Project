@@ -71,7 +71,7 @@ def map_view():
     #マップの表示遅延時間(秒)
     TIME_DELAY = 0.5
 
-    MOVE_X = -1.63
+    MOVE_X = 1.63
     MOVE_Z = 0.84
     MOVE_THETA = 0
 
@@ -86,9 +86,11 @@ def map_view():
             # map_img = person_map.get_map_img(point_list, cluster_list, average_list, prod_list, map_img)
             # 1人の検知のみ
             interact_list, with_obj_list, action = person_handler.analize_data(point_list)
-            average_location = person_cluster.get_normal_average(point_list)
-            average_location[0] = -MOVE_X+average_location[0]*math.cos(MOVE_THETA)-average_location[1]*math.sin(MOVE_THETA)
+            #average_location = person_cluster.get_normal_average(point_list)
+            average_location = person_cluster.get_norm_average(point_list)
+            temp_x = -MOVE_X+average_location[0]*math.cos(MOVE_THETA)-average_location[1]*math.sin(MOVE_THETA)
             average_location[1] = -MOVE_Z+average_location[0]*math.sin(MOVE_THETA)+average_location[1]*math.cos(MOVE_THETA)
+            average_location[0] = temp_x
             c_list = ''
             for cid, oid in zip(interact_list, with_obj_list):
                 if (cid !="none" and cid !="holding" and cid!="working"):
