@@ -182,7 +182,7 @@ class PointHandler:
     #     df.set_index('time')
     #     df.to_csv(path, encoding='shift_jis')
 
-    def write_data_to_csv(self, file_path, time_stamp, average_loc, action, interact_list, with_obj_list):
+    def write_data_to_csv(self, file_path, time_stamp, x, y, action, interact_list, with_obj_list):
         # CSVファイルが存在しない場合に新しいファイルを作成する
         if not self.file_exists:
             try:
@@ -313,15 +313,19 @@ class PointMap:
             cv2.putText(map_img, str(prob_list[avg_id]), center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
             avg_id += 1
         return map_img
-
-    def get_normal_map_img(self, average_loc, map_img, action_class, interaction_class):
+    
+    def get_map_location(self, average_loc):
         if average_loc is None:
-            return map_img
-        #   center = (self.width-int(((average_loc[0]/self.x_range)+1)*(self.width/2)),int((average_loc[1]/self.z_range)*self.height))
+            return -999, -999
         y = int((average_loc[1]/self.z_range)*self.height)
         x = -int((average_loc[0]/self.x_range)*self.width)
+        return x, y
+
+    def get_normal_map_img(self, x, y, map_img, action_class, interaction_class):
+        if x == -999:
+            return map_img
+        #   center = (self.width-int(((average_loc[0]/self.x_range)+1)*(self.width/2)),int((average_loc[1]/self.z_range)*self.height))
         center = (x, y)
-        print(center)
         cv2.circle(map_img, center, 3, (0,0,255), thickness=-1)
         cv2.putText(map_img, str(action_class),
                                    (center[0]+30,center[1]+10),

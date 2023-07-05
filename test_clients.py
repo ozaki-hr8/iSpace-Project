@@ -19,7 +19,7 @@ THETA = get_theta()
 PITCH = get_pitch()
 
 #マップ生成サーバーのIP,ポート
-CONNECT = True  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
+CONNECT = False  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
 SERVER_IP = get_ip()
 SERVER_PORT = get_port()
 
@@ -68,10 +68,10 @@ with open('pkl/book_3d.pkl', 'rb') as f3:
     model_book = pickle.load(f3)
 with open('pkl/keyboard_3d.pkl', 'rb') as f4:
     model_keyboard = pickle.load(f4)
-with open('pkl/cushion_3d.pkl', 'rb') as f4:
-    model_cushion = pickle.load(f4)
-with open('pkl/food_3d.pkl', 'rb') as f4:
-    model_food = pickle.load(f4)
+with open('pkl/cushion_3d.pkl', 'rb') as f5:
+    model_cushion = pickle.load(f5)
+with open('pkl/food_3d.pkl', 'rb') as f6:
+    model_food = pickle.load(f6)
 
 
 def get_distance(x1, y1, x2, y2):
@@ -382,8 +382,8 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             if classify:
                 pred = apply_classifier(pred, modelc, img, im0s)
 
-            #[obj, x, y, z, w, h, conf]
-            box_list = np.empty((0,7), float)
+            #[obj, x, y, z, w, h, conf, cx]
+            box_list = np.empty((0,8), float)
 
             # Process predictions
             for i, det in enumerate(pred):  # detections per image
@@ -426,8 +426,14 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             y = float(xyxy[1]) / hval
                             w = float(xyxy[2] - xyxy[0]) / wval
                             h = float(xyxy[3] - xyxy[1]) / hval
-                            z = dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))
-                            box_list = np.append(box_list, np.array([[obj,x,y,z,w,h,conf.item()]]), axis=0)
+                            cx = min(639, round(wval*(x+w/2)))
+                            cx = max(0, cx)
+                            cy = min(479, round(hval*(y+h/2)))
+                            cy = max(0, cy)
+                            z = dataset.depth_frame.get_distance(cx, cy)
+                            if z > 0:
+                                obj_3d = rs.rs2_deproject_pixel_to_point(color_intr , [cx,cy], z)
+                                box_list = np.append(box_list, np.array([[obj,x,y,z,w,h,conf.item(), obj_3d[0]]]), axis=0)
 
                         if save_img or save_crop or view_img:  # Add bbox to image
                             c = int(cls)  # integer class
@@ -438,6 +444,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
 
                 # Print time (inference + NMS)
                 print(f'{s}Done. ({t2 - t1:.3f}s)')
+                DISTANCE_THRES = 1.0
 
                 # Stream results
                 #hrcode
@@ -464,8 +471,10 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         obj_list = box_list[np.where(box_list[:,0] == obj_id)].astype(float)
                         if obj_list.shape[0] > 0:
                             if location_3d:
-                                distance_list = (x0-obj_list[:,1]+obj_list[:,4]/2)**2+(y0-obj_list[:,2]+obj_list[:,5]/2)**2+(location_3d[2] - z)**2
-                                x, y, z, w, h = obj_list[np.where(distance_list[:] == np.min(distance_list))][0][1:6]
+                                distance_list = (location_3d[0]-obj_list[:, 7])**2+(location_3d[2] - obj_list[:, 3])**2
+                                select_obj = np.where(distance_list[:] <= DISTANCE_THRES**2)
+                                if select_obj[0].shape[0] > 0:
+                                    x, y, z, w, h = obj_list[select_obj][0][1:6]
                         if obj_id == id_list[0]:  #person
                             x0, y0= get_person_xy(obj_list, results)
                             location_3d = get_3d_location(color_intr, dataset.depth_frame, round(wval*x0), round(hval*y0))
@@ -487,7 +496,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                     if(interaction_class_out):
                         body_language_prob_all=max(interaction_prob_out)
                         body_language_class_all=interaction_class_out[interaction_prob_out.index(max(interaction_prob_out))]
-                    print(location_3d)
                     if location_3d is not None:
                         #マップ生成サーバーに座標を送信
                         point = Point(location_3d[0], location_3d[2])

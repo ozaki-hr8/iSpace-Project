@@ -2,6 +2,7 @@ import socket;
 import threading
 import json
 import time
+import datetime
 import numpy as np
 import cv2
 import math
@@ -95,11 +96,10 @@ def map_view():
             for cid, oid in zip(interact_list, with_obj_list):
                 if (cid !="none" and cid !="holding" and cid!="working"):
                     c_list += f'{cid} with {oid} '
-            map_img = person_map.get_normal_map_img(average_location, map_img,action, c_list)
-            average_location[0] = round(average_location[0]*100)
-            average_location[1] = round(average_location[1]*100)
-            if(average_location[0]>=0):
-                person_handler.write_data_to_csv('server_data.csv', time.time()-TIME_DELAY, average_location, action, interact_list, with_obj_list)
+            x, y = person_map.get_map_location(average_location)
+            map_img = person_map.get_normal_map_img(x, y, map_img, action, c_list)
+            if(x>=0 and y>=0 and x<person_map.width and y < person_map.height):
+                person_handler.write_data_to_csv('server_data.csv', datetime.datetime.now()-datetime.timedelta(seconds=TIME_DELAY), x, y, action, interact_list, with_obj_list)
         cv2.imshow('server_map', map_img) 
         cv2.waitKey(1)
         time.sleep(RELOAD_INTERVAL)
