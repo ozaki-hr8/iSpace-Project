@@ -37,6 +37,8 @@ import pandas as pd
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic =  mp.solutions.holistic
 
+PERSON_CLASS_ID = '9'
+
 # class_name ="Sitting"
 # class_name ="Laying"
 # class_name ="Standing"
@@ -144,8 +146,28 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
 
     distance_s=[0 for i in range(132)]
     coords_s_pre=[0 for i in range(132)]
+    wait_frame = 0
     with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
         for path, depth, distance, depth_scale, img, im0s, vid_cap, color_intr in dataset:
+            imt = im0s[0].copy()
+            im_pose =cv2.cvtColor(imt, cv2.COLOR_BGR2RGB)
+            results = holistic.process(im_pose)
+            if wait_frame < 3 and view_img:
+                wait_frame += 1
+                continue
+            else:
+                wait_frame = 0
+            bx, by = -999, -999
+            try:
+                left_shoulder = results.pose_landmarks.landmark[11]
+                right_shoulder = results.pose_landmarks.landmark[12]
+                bx, by = (left_shoulder.x+right_shoulder.x)/2, (left_shoulder.y+right_shoulder.y)/2
+                bx = min(1, bx)
+                bx = max(0, bx)
+                by = min(1, by)
+                by = max(0, by)
+            except:
+                pass
             if onnx:
                 img = img.astype('float32')
             else:
@@ -215,12 +237,26 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
                     # Write results
+                    bone_in_box = False
                     for *xyxy, conf, cls in reversed(det):
                         if save_txt:  # Write to file
                             xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                             line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
                             with open(txt_path + '.txt', 'a') as f:
                                 f.write(('%g ' * len(line)).rstrip() % line + '\n')
+                            rst = ('%g ' * len(line)).rstrip() % line + '\n'
+                            rstlist = rst.split()
+                            obj = rstlist[0]
+                            # print(rstlist)
+                            hval = im0.shape[0]
+                            wval = im0.shape[1]
+                            if obj == PERSON_CLASS_ID:
+                                px = float(xyxy[0]) / wval
+                                py = float(xyxy[1]) / hval
+                                pw = float(xyxy[2] - xyxy[0]) / wval
+                                ph = float(xyxy[3] - xyxy[1]) / hval
+                                if bx>=px and by>=py and bx<=px+pw and by<=py+ph:
+                                    bone_in_box = True
 
                         if save_img or save_crop or view_img:  # Add bbox to image
                             c = int(cls)  # integer class
@@ -228,6 +264,8 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             im0 = plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_width=line_thickness)
                             if save_crop:
                                 save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+                    if not bone_in_box:
+                        continue
 
                 # Print time (inference + NMS)
                 print(f'{s}Done. ({t2 - t1:.3f}s)')
@@ -236,9 +274,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
 
                 #hrcode
                 if view_img:
-                    im0 =cv2.cvtColor(im0, cv2.COLOR_BGR2RGB)
-                    results = holistic.process(im0)
-                    im0 = cv2.cvtColor(im0, cv2.COLOR_RGB2BGR)
                     mp_drawing.draw_landmarks(im0,results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
                                             mp_drawing.DrawingSpec(color=(245,117,66),thickness=2,circle_radius=4),
                                             mp_drawing.DrawingSpec(color=(245,66,230),thickness=2,circle_radius=2)

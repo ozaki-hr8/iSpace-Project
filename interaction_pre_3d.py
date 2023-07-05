@@ -37,14 +37,16 @@ import pandas as pd
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic =  mp.solutions.holistic
 
+PERSON_CLASS_ID = '9'
+
 #last.pt
 #0:banana 1:book 2:bottle 4:cellphone 5:cushion 6:keyboard 
 TARGET_CLASS_ID = '1'
-CSV_NAME = 'training_csv/keyboard_3d.csv'
+CSV_NAME = 'training_csv/book_3d.csv'
 
 #Book
 # class_name ="Holding Book"
-# class_name ="Reading Book"
+class_name ="Reading Book"
 # class_name ="None"
 
 #Botttle
@@ -59,7 +61,7 @@ CSV_NAME = 'training_csv/keyboard_3d.csv'
 
 #Keybord
 # class_name ="Working on Computer"
-class_name ="None"
+# class_name ="None"
 
 #Food
 # class_name ="Eating"
@@ -178,6 +180,17 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                 continue
             else:
                 wait_frame = 0
+            bx, by = -999, -999
+            try:
+                left_shoulder = results.pose_landmarks.landmark[11]
+                right_shoulder = results.pose_landmarks.landmark[12]
+                bx, by = (left_shoulder.x+right_shoulder.x)/2, (left_shoulder.y+right_shoulder.y)/2
+                bx = min(1, bx)
+                bx = max(0, bx)
+                by = min(1, by)
+                by = max(0, by)
+            except:
+                pass
             if onnx:
                 img = img.astype('float32')
             else:
@@ -247,6 +260,9 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         n = (det[:, -1] == c).sum()  # detections per class
                         s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
+                    x, y, w, h = 0, 0, 0, 0
+                    distance = 1000
+                    bone_in_box = False
                     # Write results
                     for *xyxy, conf, cls in reversed(det):
                         if save_txt:  # Write to file
@@ -261,30 +277,35 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             # print(rstlist)
                             hval = im0.shape[0]
                             wval = im0.shape[1]
-                            if obj == TARGET_CLASS_ID: #keyboard
-                                x = float(xyxy[0]) / wval
-                                y = float(xyxy[1]) / hval
-                                w = float(xyxy[2] - xyxy[0]) / wval
-                                h = float(xyxy[3] - xyxy[1]) / hval
-                                z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
+                            if obj == TARGET_CLASS_ID:
+                                tx = float(xyxy[0]) / wval
+                                ty = float(xyxy[1]) / hval
+                                tw = float(xyxy[2] - xyxy[0]) / wval
+                                th = float(xyxy[3] - xyxy[1]) / hval
+                                td = (bx-(tx+tw/2))**2+(by-(ty+th/2))**2
+                                if td < distance:
+                                    distance, x, y, w, h = td, tx, ty, tw, th
+                                    z = dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))
+                            if obj == PERSON_CLASS_ID:
+                                px = float(xyxy[0]) / wval
+                                py = float(xyxy[1]) / hval
+                                pw = float(xyxy[2] - xyxy[0]) / wval
+                                ph = float(xyxy[3] - xyxy[1]) / hval
+                                if bx>=px and by>=py and bx<=px+pw and by<=py+ph:
+                                    bone_in_box = True
                         if save_img or save_crop or view_img:  # Add bbox to image
                             c = int(cls)  # integer class
                             label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
                             im0 = plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_width=line_thickness)
+                            cv2.circle(im0, (round(wval*x), round(hval*y)), 10, (255, 0, 0), thickness=-1)
                             if save_crop:
                                 save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
-
-                                # Print time (inference + NMS)
+                    if not bone_in_box:
+                        continue
+                # Print time (inference + NMS)
                 print(f'{s}Done. ({t2 - t1:.3f}s)')
 
-                # Stream results
-
-                #hrcode
-
                 if view_img:
-                    # im0 =cv2.cvtColor(im0, cv2.COLOR_BGR2RGB)
-                    # results = holistic.process(im0)
-                    # im0 = cv2.cvtColor(im0, cv2.COLOR_RGB2BGR)
                     mp_drawing.draw_landmarks(im0,results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
                                             mp_drawing.DrawingSpec(color=(245,117,66),thickness=2,circle_radius=4),
                                             mp_drawing.DrawingSpec(color=(245,66,230),thickness=2,circle_radius=2)
