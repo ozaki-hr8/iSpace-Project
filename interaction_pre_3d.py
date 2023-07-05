@@ -243,7 +243,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
 
             # Process predictions
             for i, det in enumerate(pred):  # detections per image
-                x=y=w=h=z=0
+                
                 if webcam:  # batch_size >= 1
                     p, s, im0, frame = path[i], f'{i}: ', im0s[i].copy(), dataset.count
                 else:
@@ -273,7 +273,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         n = (det[:, -1] == c).sum()  # detections per class
                         s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
-                    x, y, w, h = 0, 0, 0, 0
+                    x=y=w=h=z=0
                     distance = 1000
                     bone_in_box = False
                     # Write results
