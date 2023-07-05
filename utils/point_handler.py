@@ -159,8 +159,9 @@ class PointHandler:
                 if data_amount-1 == i:
                     action = class_data[0]
                     continue
-                interact_list.append(class_data[0])
-                with_obj_list.append(class_data[1])
+                if(class_data[0]!="holding"):
+                    interact_list.append(class_data[0])
+                    with_obj_list.append(class_data[1])
 
         if len(interact_list) == 0:
             interact_list.append('none')
