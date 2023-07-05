@@ -37,6 +37,11 @@ import pandas as pd
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic =  mp.solutions.holistic
 
+#last.pt
+#0:banana 1:book 2:bottle 4:cellphone 5:cushion 6:keyboard 
+TARGET_CLASS_ID = '1'
+CSV_NAME = 'training_csv/keyboard_3d.csv'
+
 #Book
 # class_name ="Holding Book"
 # class_name ="Reading Book"
@@ -45,7 +50,7 @@ mp_holistic =  mp.solutions.holistic
 #Botttle
 # class_name ="Holding Bottle"
 # class_name ="Drinking"
-class_name ="None"
+# class_name ="None"
 
 #Phone
 # class_name ="Holding Phone"
@@ -54,8 +59,12 @@ class_name ="None"
 
 #Keybord
 # class_name ="Working on Computer"
-# class_name ="None"
+class_name ="None"
 
+#Food
+# class_name ="Eating"
+# class_name ="Holding Food"
+# class_name ="None"
 #hrcode
 
 @torch.no_grad()
@@ -252,39 +261,13 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             # print(rstlist)
                             hval = im0.shape[0]
                             wval = im0.shape[1]
-                            # if obj == '3': #cell phone
-                            #     x = float(xyxy[0]) / wval
-                            #     y = float(xyxy[1]) / hval
-                            #     w = float(xyxy[2] - xyxy[0]) / wval
-                            #     h = float(xyxy[3] - xyxy[1]) / hval
-                            #     z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
-                            # if obj == '0': #book
-                            #     x = float(xyxy[0]) / wval
-                            #     y = float(xyxy[1]) / hval
-                            #     w = float(xyxy[2] - xyxy[0]) / wval
-                            #     h = float(xyxy[3] - xyxy[1]) / hval
-                            #     z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
-                            # if obj == '6': #keyboard
-                            #     x = float(xyxy[0]) / wval
-                            #     y = float(xyxy[1]) / hval
-                            #     w = float(xyxy[2] - xyxy[0]) / wval
-                            #     h = float(xyxy[3] - xyxy[1]) / hval
-                            #     z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
-                            if obj == '1': #bottle
+                            if obj == TARGET_CLASS_ID: #keyboard
                                 x = float(xyxy[0]) / wval
                                 y = float(xyxy[1]) / hval
                                 w = float(xyxy[2] - xyxy[0]) / wval
                                 h = float(xyxy[3] - xyxy[1]) / hval
                                 z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
-                            # if obj == '2': #carpet
-                            #     x = float(xyxy[0]) / wval
-                            #     y = float(xyxy[1]) / hval
-                            #     w = float(xyxy[2] - xyxy[0]) / wval
-                            #     h = float(xyxy[3] - xyxy[1]) / hval
-                            #     z = round(dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))*100)
-                            # if obj == '9': #carpet
-                            # 
-                if save_img or save_crop or view_img:  # Add bbox to image
+                        if save_img or save_crop or view_img:  # Add bbox to image
                             c = int(cls)  # integer class
                             label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
                             im0 = plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_width=line_thickness)
@@ -344,7 +327,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         row = coords_s+coords_human+coords_obj+shape_obj+distance_so+distance_s
                         row.insert(0,class_name)
 
-                        with open('training_csv/bottle_3d.csv',mode='a' ,newline='') as f:
+                        with open(CSV_NAME,mode='a' ,newline='') as f:
                             if(x!=0 or class_name=='None'):
                                 csv_writer =csv.writer(f, delimiter=',',quotechar='"',quoting=csv.QUOTE_MINIMAL)
                                 csv_writer.writerow(row)
