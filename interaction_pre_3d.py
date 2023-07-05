@@ -33,6 +33,7 @@ import os
 import csv
 import pickle
 import pandas as pd
+import pyrealsense2 as rs
 
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic =  mp.solutions.holistic
@@ -180,6 +181,8 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                 continue
             else:
                 wait_frame = 0
+            
+            person_3d = None
             bx, by = -999, -999
             try:
                 left_shoulder = results.pose_landmarks.landmark[11]
@@ -191,6 +194,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                 by = max(0, by)
             except:
                 pass
+
             if onnx:
                 img = img.astype('float32')
             else:
@@ -245,6 +249,15 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                 else:
                     p, s, im0, frame = path, '', im0s.copy(), getattr(dataset, 'frame', 0)
 
+                hval = im0.shape[0]
+                wval = im0.shape[1]
+
+                if bx != -999:
+                    pix_x = round((bx+tw/2)*(wval-1))
+                    pix_y = round((by+th/2)*(hval-1))
+                    pix_z = dataset.depth_frame.get_distance(pix_x, pix_y)
+                    person_3d = rs.rs2_deproject_pixel_to_point(color_intr , [pix_x,pix_y], pix_z)
+
                 p = Path(p)  # to Path
                 save_path = str(save_dir / p.name)  # img.jpg
                 txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
@@ -275,17 +288,19 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             rstlist = rst.split()
                             obj = rstlist[0]
                             # print(rstlist)
-                            hval = im0.shape[0]
-                            wval = im0.shape[1]
                             if obj == TARGET_CLASS_ID:
                                 tx = float(xyxy[0]) / wval
                                 ty = float(xyxy[1]) / hval
                                 tw = float(xyxy[2] - xyxy[0]) / wval
                                 th = float(xyxy[3] - xyxy[1]) / hval
-                                td = (bx-(tx+tw/2))**2+(by-(ty+th/2))**2
-                                if td < distance:
-                                    distance, x, y, w, h = td, tx, ty, tw, th
-                                    z = dataset.depth_frame.get_distance(round(wval*(x+w/2)), round(hval*(y+h/2)))
+                                pix_x = round((xyxy[0]+xyxy[2])/2)
+                                pix_y = round((xyxy[1]+xyxy[3])/2)
+                                pix_z = dataset.depth_frame.get_distance(pix_x, pix_y)
+                                obj_3d = rs.rs2_deproject_pixel_to_point(color_intr , [pix_x,pix_y], pix_z)
+                                if person_3d is not None:
+                                    td = (obj_3d[0]-person_3d[0])**2 + (obj_3d[2]-person_3d[2])**2
+                                    if td < distance:
+                                        distance, x, y, w, h, z = td, tx, ty, tw, th, obj_3d[2]
                             if obj == PERSON_CLASS_ID:
                                 px = float(xyxy[0]) / wval
                                 py = float(xyxy[1]) / hval
@@ -297,11 +312,11 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             c = int(cls)  # integer class
                             label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
                             im0 = plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_width=line_thickness)
-                            cv2.circle(im0, (round(wval*x), round(hval*y)), 10, (255, 0, 0), thickness=-1)
                             if save_crop:
                                 save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
                     if not bone_in_box:
                         continue
+                    cv2.circle(im0, (round(wval*x), round(hval*y)), 10, (255, 0, 0), thickness=-1)
                 # Print time (inference + NMS)
                 print(f'{s}Done. ({t2 - t1:.3f}s)')
 
@@ -311,9 +326,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                                             mp_drawing.DrawingSpec(color=(245,66,230),thickness=2,circle_radius=2)
                                             )
                     try:
-                        hval = im0.shape[0]
-                        wval = im0.shape[1]
-
                         coords_obj=list(np.array([x, y, z]).flatten())
                         shape_obj=list(np.array([w, h]).flatten())
                         pose = results.pose_landmarks.landmark
