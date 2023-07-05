@@ -42,18 +42,18 @@ PERSON_CLASS_ID = '9'
 
 #last.pt
 #0:banana 1:book 2:bottle 4:cellphone 5:cushion 6:keyboard 
-TARGET_CLASS_ID = '1'
-CSV_NAME = 'training_csv/book_3d.csv'
+TARGET_CLASS_ID = '2'
+CSV_NAME = 'training_csv/bottle_3d.csv'
 
 #Book
 # class_name ="Holding Book"
-class_name ="Reading Book"
+# class_name ="Reading Book"
 # class_name ="None"
 
-#Botttle
+#Bottle
 # class_name ="Holding Bottle"
 # class_name ="Drinking"
-# class_name ="None"
+class_name ="None"
 
 #Phone
 # class_name ="Holding Phone"
@@ -253,8 +253,8 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                 wval = im0.shape[1]
 
                 if bx != -999:
-                    pix_x = round((bx+tw/2)*(wval-1))
-                    pix_y = round((by+th/2)*(hval-1))
+                    pix_x = round(bx*(wval-1))
+                    pix_y = round(by*(hval-1))
                     pix_z = dataset.depth_frame.get_distance(pix_x, pix_y)
                     person_3d = rs.rs2_deproject_pixel_to_point(color_intr , [pix_x,pix_y], pix_z)
 
@@ -275,6 +275,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
 
                     x=y=w=h=z=0
                     distance = 1000
+                    DISTANCE_LIMIT = 1.0
                     bone_in_box = False
                     # Write results
                     for *xyxy, conf, cls in reversed(det):
@@ -293,14 +294,18 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                                 ty = float(xyxy[1]) / hval
                                 tw = float(xyxy[2] - xyxy[0]) / wval
                                 th = float(xyxy[3] - xyxy[1]) / hval
-                                pix_x = round((xyxy[0]+xyxy[2])/2)
-                                pix_y = round((xyxy[1]+xyxy[3])/2)
+                                pix_x = round((float(xyxy[0])+float(xyxy[2]))/2)
+                                pix_y = round((float(xyxy[1])+float(xyxy[3]))/2)
                                 pix_z = dataset.depth_frame.get_distance(pix_x, pix_y)
                                 obj_3d = rs.rs2_deproject_pixel_to_point(color_intr , [pix_x,pix_y], pix_z)
                                 if person_3d is not None:
                                     td = (obj_3d[0]-person_3d[0])**2 + (obj_3d[2]-person_3d[2])**2
                                     if td < distance:
-                                        distance, x, y, w, h, z = td, tx, ty, tw, th, obj_3d[2]
+                                        if class_name == 'None':
+                                            distance, x, y, w, h, z = td, tx, ty, tw, th, obj_3d[2]
+                                        else:
+                                            if td < DISTANCE_LIMIT**2:
+                                                distance, x, y, w, h, z = td, tx, ty, tw, th, obj_3d[2]
                             if obj == PERSON_CLASS_ID:
                                 px = float(xyxy[0]) / wval
                                 py = float(xyxy[1]) / hval
