@@ -19,7 +19,7 @@ THETA = get_theta()
 PITCH = get_pitch()
 
 #マップ生成サーバーのIP,ポート
-CONNECT = False  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
+CONNECT = True  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
 SERVER_IP = get_ip()
 SERVER_PORT = get_port()
 
