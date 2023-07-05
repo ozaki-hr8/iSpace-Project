@@ -159,8 +159,9 @@ class PointHandler:
                 if data_amount-1 == i:
                     action = class_data[0]
                     continue
-                interact_list.append(class_data[0])
-                with_obj_list.append(class_data[1])
+                if(class_data[0]!="holding"):
+                    interact_list.append(class_data[0])
+                    with_obj_list.append(class_data[1])
 
         if len(interact_list) == 0:
             interact_list.append('none')
@@ -196,7 +197,7 @@ class PointHandler:
             if not self.file_exists:
                 writer.writerow(['time', 'x', 'z', 'action', 'interactions', 'target_obj'])  # ヘッダーの内容を適宜変更
             # データを書き込む
-            writer.writerow([time_stamp, average_loc[0], average_loc[1], action, ",".join(map(str, interact_list)), ",".join(map(str, with_obj_list))])
+            writer.writerow([time_stamp, x, y, action, ",".join(map(str, interact_list)), ",".join(map(str, with_obj_list))])
 
 import math
 

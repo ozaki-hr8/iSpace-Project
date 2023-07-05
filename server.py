@@ -94,7 +94,7 @@ def map_view():
             average_location[0] = temp_x
             c_list = ''
             for cid, oid in zip(interact_list, with_obj_list):
-                if (cid !="none" and cid !="holding" and cid!="working"):
+                if (cid !="none" and cid !="holding"):
                     c_list += f'{cid} with {oid} '
             x, y = person_map.get_map_location(average_location)
             map_img = person_map.get_normal_map_img(x, y, map_img, action, c_list)
