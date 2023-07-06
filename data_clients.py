@@ -180,6 +180,13 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
         tfl_int8=False,  # INT8 quantized TFLite model
         ):
     data_number = 0
+    file_names = os.listdir(RAW_IMG_DIR)
+    # 数字のみのファイル名を抽出
+    numeric_file_names = [name.split(".")[0] for name in file_names if name.endswith(".png") and name[:-4].isdigit()]
+    # 数字の最大値を取得
+    if numeric_file_names:
+        data_number = max(map(int, numeric_file_names))+1
+        print(f'data:{data_number} から記録を開始します')
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://', 'https://'))
