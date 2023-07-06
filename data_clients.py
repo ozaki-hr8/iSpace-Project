@@ -399,6 +399,8 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             # NMS
             pred = non_max_suppression(pred, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)
             t2 = time_sync()
+            
+            id_list = ['9', '4', '1', '6', '2','5','0']
 
             # Second-stage classifier (optional)
             if classify:
@@ -434,7 +436,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
                     # Write results
-                    id_list = ['9', '4', '1', '6', '2','5','0']
                     for *xyxy, conf, cls in reversed(det):
                         if save_txt:  # Write to file
                             xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
