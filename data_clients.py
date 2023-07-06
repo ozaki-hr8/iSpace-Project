@@ -399,7 +399,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             # NMS
             pred = non_max_suppression(pred, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)
             t2 = time_sync()
-            
+
             id_list = ['9', '4', '1', '6', '2','5','0']
 
             # Second-stage classifier (optional)
@@ -532,7 +532,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         data_dict = add_location_data(data_dict, 'person', point)
                         cv2.imwrite(f'{RAW_IMG_DIR}{data_number}.png', imt)
                         cv2.imwrite(f'{RESULT_IMG_DIR}{data_number}.png', im0)
-                        data_number += 1
                         cv2.circle(im0, (round(wval*x0), round(hval*y0)), 1, (0, 0, 255), thickness=-1)
                         # depth_image = np.asanyarray(dataset.depth_frame.get_data())[upper_y:lower_y,left_x:right_x]
                         # depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.02), cv2.COLORMAP_JET)
@@ -569,6 +568,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                     #             , (10,90+120), cv2.FONT_HERSHEY_SIMPLEX, 1.7, (255, 255, 255), 3, cv2.LINE_AA)
 
                     cv2.imshow('mpYolo', im0)
+                    data_number += 1
                     # cv2.imshow('pose', im_pose)
                         # cv2.waitKey(1)  # 1 millisecond
                 #hrcode
