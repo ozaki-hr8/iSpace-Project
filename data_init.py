@@ -22,7 +22,7 @@ if not os.path.exists('client_data/result_img'):
 
 num_coords = 33
 
-landmarks = ['data_id','class']
+landmarks = ['data_id', 'probs', 'class']
 for val in range(1, num_coords+1):
     landmarks += ['skeleton_x{}'.format(val), 'skeleton_y{}'.format(val), 'skeleton_z{}'.format(val), 'skeleton_v{}'.format(val)]
             
@@ -40,7 +40,7 @@ for csv_dir in interact_data_list:
         csv_writer =csv.writer(f, delimiter=',',quotechar='"',quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow(landmarks)
             
-landmarks = ['data_id','class']
+landmarks = ['data_id', 'probs','class']
 for val in range(1, num_coords+1):
     landmarks += ['skeleton_x{}'.format(val), 'skeleton_y{}'.format(val), 'skeleton_z{}'.format(val), 'skeleton_v{}'.format(val)]
 

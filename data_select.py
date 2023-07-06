@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import csv
 
-TARGET_CSV = 'bottle_3d.csv'
+TARGET_CSV = 'action_3d.csv'
 
 RAW_IMG_DIR = 'client_data/raw_img'
 RESULT_IMG_DIR = 'client_data/result_img'
@@ -21,7 +21,9 @@ CLASS_DIC = {'action_3d.csv' : ['None', 'Walking', 'Standing', 'Sitting', 'Layin
 
 df = pd.read_csv(f'{DATA_CSV_DIR}/{TARGET_CSV}') 
 X = df.drop('data_id', axis=1)
+X = X.drop('probs', axis=1)
 y = df['data_id']
+p = df['probs']
 
 data_number = 0
 select = 0
@@ -36,12 +38,14 @@ for cls in class_list:
 
 while(True):
     data_number = y[index]
+    prob = p[index]
     im_raw = cv2.imread(f'{RAW_IMG_DIR}/{data_number}.png')
     im_result = cv2.imread(f'{RESULT_IMG_DIR}/{data_number}.png')
     img = cv2.hconcat([im_raw, im_result])
     white_image = np.ones((100, img.shape[1], 3), dtype=np.uint8) * 255
     img = cv2.vconcat([white_image, img])
-    cv2.putText(img, str(X['class'][index]), (50,20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2, cv2.LINE_AA)
+    detect_class = X['class'][index]
+    cv2.putText(img, f'{detect_class} {prob}', (50,20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2, cv2.LINE_AA)
     cv2.putText(img, keys, (50,50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2, cv2.LINE_AA)
     if index in data_dict:
         cv2.putText(img, data_dict[index], (50,80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 255, 64), 2, cv2.LINE_AA)
@@ -51,6 +55,10 @@ while(True):
 
     if key == 27:   #esc
         break
+    if key == 13:   #enter
+        data_dict[index] = detect_class
+        index += 1
+        print(f'データを保存対象として選択 ({index}/{len(y)})')
     if key == ord('k'):
         break
     elif key == 8:    #backspace
@@ -59,8 +67,8 @@ while(True):
             print(f'データを削除 ({index}/{len(y)})')
     elif key == 81:    #<-
         if index > 0:
-            index -= 1
             print(f'({index}/{len(y)})')
+            index -= 1
         continue
     elif key == 83:   #->
         index += 1

@@ -19,7 +19,7 @@ THETA = get_theta()
 PITCH = get_pitch()
 
 #マップ生成サーバーのIP,ポート
-CONNECT = False  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
+CONNECT = True  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
 SERVER_IP = get_ip()
 SERVER_PORT = get_port()
 
@@ -289,6 +289,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             interaction_class= model_var.predict(X)[0]
             interaction_prob = model_var.predict_proba(X)[0]
             row.insert(0,interaction_class)
+            row.insert(0,round(interaction_prob[np.argmax(interaction_prob)],2))
             row.insert(0,data_number)
             with open(f'{CSV_DIR}{obj_name}_3d.csv',mode='a' ,newline='') as f:
                 csv_writer =csv.writer(f, delimiter=',',quotechar='"',quoting=csv.QUOTE_MINIMAL)
@@ -325,6 +326,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
         action_prob = model_var.predict_proba(X)[0]
         action_prob = round(action_prob[np.argmax(action_prob)],2)
         row.insert(0,action_class)
+        row.insert(0,action_prob)
         row.insert(0,data_number)
         with open(f'{CSV_DIR}action_3d.csv',mode='a' ,newline='') as f:
             csv_writer =csv.writer(f, delimiter=',',quotechar='"',quoting=csv.QUOTE_MINIMAL)
