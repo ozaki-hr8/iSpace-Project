@@ -14,7 +14,7 @@ HOST = get_ip()
 PORT = get_port()
 
 #カメラ数
-CAMERA_AMOUNT = 5
+CAMERA_AMOUNT = 6
 
 person_data = None
 person_handler = PointHandler('person')
