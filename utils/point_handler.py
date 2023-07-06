@@ -195,7 +195,7 @@ class PointHandler:
             writer = csv.writer(file)
             # ファイルが存在しなかった場合はヘッダーを書き込む
             if not self.file_exists:
-                writer.writerow(['time', 'x', 'z', 'action', 'interactions', 'target_obj'])  # ヘッダーの内容を適宜変更
+                writer.writerow(['time', 'x', 'y', 'action', 'interactions', 'target_obj'])  # ヘッダーの内容を適宜変更
             # データを書き込む
             writer.writerow([time_stamp, x, y, action, ",".join(map(str, interact_list)), ",".join(map(str, with_obj_list))])
 
