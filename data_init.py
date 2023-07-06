@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import csv
+import os
 
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic =  mp.solutions.holistic
@@ -16,6 +17,15 @@ interact_data_list = ['client_data/csv_data/book_3d.csv',
                       'client_data/csv_data/keyboard_3d.csv']
 
 action_csv = 'client_data/csv_data/action_3d.csv'
+
+if not os.path.exists('client_data'):
+    os.makedirs('client_data')
+if not os.path.exists('client_data/csv_data'):
+    os.makedirs('client_data/csv_data')
+if not os.path.exists('client_data/raw_img'):
+    os.makedirs('client_data/raw_img')
+if not os.path.exists('client_data/result_img'):
+    os.makedirs('client_data/result_img')
 
 with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
     while cap.isOpened():
