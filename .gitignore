@@ -24,6 +24,9 @@
 
 storage.googleapis.com
 runs/*
+client_data/raw_img/*
+client_data/result_img/*
+client_data/csv_data/*
 data/*
 !data/hyps/*
 !data/images/zidane.jpg
