@@ -37,21 +37,25 @@ for cls in class_list:
     keys += f'{num}:{cls} '
 
 while(True):
+    if len(y) == 0:
+        print('記録データがありません')
+        break
     data_number = y[index]
     prob = p[index]
     im_raw = cv2.imread(f'{RAW_IMG_DIR}/{data_number}.png')
     im_result = cv2.imread(f'{RESULT_IMG_DIR}/{data_number}.png')
-    img = cv2.hconcat([im_raw, im_result])
-    white_image = np.ones((100, img.shape[1], 3), dtype=np.uint8) * 255
-    img = cv2.vconcat([white_image, img])
-    detect_class = X['class'][index]
-    cv2.putText(img, f'{detect_class} {prob}', (50,20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2, cv2.LINE_AA)
-    cv2.putText(img, keys, (50,50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2, cv2.LINE_AA)
-    if index in data_dict:
-        cv2.putText(img, data_dict[index], (50,80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 255, 64), 2, cv2.LINE_AA)
-    cv2.imshow('selector', img)
+    if not (im_raw is None or im_result is None):    
+        img = cv2.hconcat([im_raw, im_result])
+        white_image = np.ones((100, img.shape[1], 3), dtype=np.uint8) * 255
+        img = cv2.vconcat([white_image, img])
+        detect_class = X['class'][index]
+        cv2.putText(img, f'{detect_class} {prob}', (50,20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2, cv2.LINE_AA)
+        cv2.putText(img, keys, (50,50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2, cv2.LINE_AA)
+        if index in data_dict:
+            cv2.putText(img, data_dict[index], (50,80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 255, 64), 2, cv2.LINE_AA)
+        cv2.imshow('selector', img)
 
-    key = cv2.waitKey(0) & 0xFF
+        key = cv2.waitKey(0) & 0xFF
 
     if key == 27:   #esc
         break
@@ -67,8 +71,8 @@ while(True):
             print(f'データを削除 ({index}/{len(y)})')
     elif key == 81:    #<-
         if index > 0:
-            print(f'({index}/{len(y)})')
             index -= 1
+            print(f'({index}/{len(y)})')
         continue
     elif key == 83:   #->
         index += 1
