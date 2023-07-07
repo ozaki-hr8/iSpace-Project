@@ -86,14 +86,14 @@ def map_view():
             # average_list, prod_list = person_cluster.get_average_and_prod_list(point_list, cluster_list)
             # map_img = person_map.get_map_img(point_list, cluster_list, average_list, prod_list, map_img)
             # 1人の検知のみ
-            interact_list, with_obj_list, action = person_handler.analize_data(point_list)
+            interact_list, target_obj_list, action = person_handler.multicam_complement(point_list)
             #average_location = person_cluster.get_normal_average(point_list)
             average_location = person_cluster.get_norm_average(point_list)
             temp_x = -MOVE_X+average_location[0]*math.cos(MOVE_THETA)-average_location[1]*math.sin(MOVE_THETA)
             average_location[1] = -MOVE_Z+average_location[0]*math.sin(MOVE_THETA)+average_location[1]*math.cos(MOVE_THETA)
             average_location[0] = temp_x
             c_list = ''
-            for cid, oid in zip(interact_list, with_obj_list):
+            for cid, oid in zip(interact_list, target_obj_list):
                 if (cid !="none" and cid !="holding"):
                     c_list += f'{cid} with {oid} '
             x, y = person_map.get_map_location(average_location)
@@ -103,7 +103,7 @@ def map_view():
                                    (10,10),
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
             if(x>=0 and y>=0 and x<person_map.width and y < person_map.height):
-                person_handler.write_data_to_csv('server_data.csv', data_time, x, y, action, interact_list, with_obj_list)
+                person_handler.write_data_to_csv('server_data.csv', data_time, x, y, action, interact_list, target_obj_list)
         cv2.imshow('server_map', map_img) 
         cv2.waitKey(1)
         time.sleep(RELOAD_INTERVAL)
