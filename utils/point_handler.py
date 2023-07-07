@@ -1,5 +1,7 @@
 import numpy as np
 import time
+import pandas as pd
+import csv
 
 id_dict = {
     0 : ['none', 'none'],
@@ -70,13 +72,10 @@ def get_interact_weight_for_list(distance_list):
         distance_list[i] = get_interact_weight(distance_list[i])
     return distance_list
 
-
-def get_location_weight(distance):
-    rms = -2.5E-4 + 1.1904762E-4 * distance + 0.003761904762*(distance^2)
-    return 1 - rms/distance
-
-import pandas as pd
-import csv
+# 座標の重み（現在は使用なし）
+# def get_location_weight(distance):
+#     rms = -2.5E-4 + 1.1904762E-4 * distance + 0.003761904762*(distance^2)
+#     return 1 - rms/distance
 
 #クライアント側でポイントデータを扱う際に使用
 class PointHandler:
@@ -118,9 +117,9 @@ class PointHandler:
         point_list = data_list[indices]
         return point_list
 
-    def analize_data(self, data_list):
+    def multicam_complement(self, data_list):
         interact_list = []
-        with_obj_list = []
+        target_obj_list = []
         action = None
         data_amount = max(0, int((data_list[0].shape[0]-4)/2))
         for i in range(data_amount):
@@ -152,23 +151,23 @@ class PointHandler:
                     action = 'NO CLASS'
                     continue
                 interact_list.append('NO CLASS')
-                with_obj_list.append('NO OBJ')
+                target_obj_list.append('NO OBJ')
             else:
                 if data_amount-1 == i:
                     action = class_data[0]
                     continue
                 if(class_data[0]!="holding"):
                     interact_list.append(class_data[0])
-                    with_obj_list.append(class_data[1])
+                    target_obj_list.append(class_data[1])
 
         if len(interact_list) == 0:
             interact_list.append('none')
-        if len(with_obj_list) == 0:
-            with_obj_list.append('none')
-        return interact_list, with_obj_list, action
+        if len(target_obj_list) == 0:
+            target_obj_list.append('none')
+        return interact_list, target_obj_list, action
 
 
-    # def to_csv(self, path, time_stamp, average_loc, action, interact_list, with_obj_list):
+    # def to_csv(self, path, time_stamp, average_loc, action, interact_list, target_obj_list):
 
     #     df = pd.DataFrame({
     #         'time' : time_stamp,
@@ -176,12 +175,12 @@ class PointHandler:
     #         'z' : average_loc[1],
     #         'action' : action,
     #         'interact' : ",".join(map(str, interact_list)),
-    #         'with_obj' : ",".join(map(str, with_obj_list))
+    #         'with_obj' : ",".join(map(str, target_obj_list))
     #     })
     #     df.set_index('time')
     #     df.to_csv(path, encoding='shift_jis')
 
-    def write_data_to_csv(self, file_path, time_stamp, x, y, action, interact_list, with_obj_list):
+    def write_data_to_csv(self, file_path, time_stamp, x, y, action, interact_list, target_obj_list):
         # CSVファイルが存在しない場合に新しいファイルを作成する
         if not self.file_exists:
             try:
@@ -195,7 +194,7 @@ class PointHandler:
             if not self.file_exists:
                 writer.writerow(['time', 'x', 'y', 'action', 'interactions', 'target_obj'])  # ヘッダーの内容を適宜変更
             # データを書き込む
-            writer.writerow([time_stamp, x, y, action, ",".join(map(str, interact_list)), ",".join(map(str, with_obj_list))])
+            writer.writerow([time_stamp, x, y, action, ",".join(map(str, interact_list)), ",".join(map(str, target_obj_list))])
 
 import math
 
