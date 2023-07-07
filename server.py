@@ -98,8 +98,12 @@ def map_view():
                     c_list += f'{cid} with {oid} '
             x, y = person_map.get_map_location(average_location)
             map_img = person_map.get_normal_map_img(x, y, map_img, action, c_list)
+            data_time = datetime.datetime.now()-datetime.timedelta(seconds=TIME_DELAY)
+            cv2.putText(map_img, str(data_time),
+                                   (10,10),
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
             if(x>=0 and y>=0 and x<person_map.width and y < person_map.height):
-                person_handler.write_data_to_csv('server_data.csv', datetime.datetime.now()-datetime.timedelta(seconds=TIME_DELAY), x, y, action, interact_list, with_obj_list)
+                person_handler.write_data_to_csv('server_data.csv', data_time, x, y, action, interact_list, with_obj_list)
         cv2.imshow('server_map', map_img) 
         cv2.waitKey(1)
         time.sleep(RELOAD_INTERVAL)

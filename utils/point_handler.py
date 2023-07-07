@@ -82,7 +82,7 @@ import csv
 
 #クライアント側でポイントデータを扱う際に使用
 class PointHandler:
-    def __init__(self, class_name, none_threshold=0.9):
+    def __init__(self, class_name, none_threshold=0.7):
         self.class_name = class_name
         self.threshold = none_threshold
         self.file_exists = False
