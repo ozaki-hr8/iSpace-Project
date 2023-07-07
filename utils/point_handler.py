@@ -52,18 +52,16 @@ def name_to_id(name):
   return None
 
 def get_interact_weight(distance):
-    if distance < 1:
+    if  0.7 < distance and distance < 2:
         return 0.92
-    elif distance < 2:
-        return 0.95
     elif distance < 3:
-        return 0.92
+        return 0.95
     elif distance < 4:
-        return 0.81
+        return 0.92
     elif distance < 5:
+        return 0.67
+    elif distance < 7:
         return 0.55
-    elif distance < 6:
-        return 0.61
     else:
         return 0.3
 
