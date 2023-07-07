@@ -19,7 +19,7 @@ THETA = get_theta()
 PITCH = get_pitch()
 
 #マップ生成サーバーのIP,ポート
-CONNECT = False  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
+CONNECT = True  #ソケット通信を行う場合はTrue、行わない場合はFalseにしてください。
 SERVER_IP = get_ip()
 SERVER_PORT = get_port()
 
@@ -180,6 +180,13 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
         tfl_int8=False,  # INT8 quantized TFLite model
         ):
     data_number = 0
+    file_names = os.listdir(RAW_IMG_DIR)
+    # 数字のみのファイル名を抽出
+    numeric_file_names = [name.split(".")[0] for name in file_names if name.endswith(".png") and name[:-4].isdigit()]
+    # 数字の最大値を取得
+    if numeric_file_names:
+        data_number = max(map(int, numeric_file_names))+1
+        print(f'data:{data_number} から記録を開始します')
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://', 'https://'))
@@ -282,6 +289,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             interaction_class= model_var.predict(X)[0]
             interaction_prob = model_var.predict_proba(X)[0]
             row.insert(0,interaction_class)
+            row.insert(0,round(interaction_prob[np.argmax(interaction_prob)],2))
             row.insert(0,data_number)
             with open(f'{CSV_DIR}{obj_name}_3d.csv',mode='a' ,newline='') as f:
                 csv_writer =csv.writer(f, delimiter=',',quotechar='"',quoting=csv.QUOTE_MINIMAL)
@@ -318,6 +326,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
         action_prob = model_var.predict_proba(X)[0]
         action_prob = round(action_prob[np.argmax(action_prob)],2)
         row.insert(0,action_class)
+        row.insert(0,action_prob)
         row.insert(0,data_number)
         with open(f'{CSV_DIR}action_3d.csv',mode='a' ,newline='') as f:
             csv_writer =csv.writer(f, delimiter=',',quotechar='"',quoting=csv.QUOTE_MINIMAL)
@@ -391,6 +400,8 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             pred = non_max_suppression(pred, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)
             t2 = time_sync()
 
+            id_list = ['9', '4', '1', '6', '2','5','0']
+
             # Second-stage classifier (optional)
             if classify:
                 pred = apply_classifier(pred, modelc, img, im0s)
@@ -425,7 +436,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
                     # Write results
-                    id_list = ['9', '4', '1', '6', '2','5','0']
                     for *xyxy, conf, cls in reversed(det):
                         if save_txt:  # Write to file
                             xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
@@ -522,7 +532,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                         data_dict = add_location_data(data_dict, 'person', point)
                         cv2.imwrite(f'{RAW_IMG_DIR}{data_number}.png', imt)
                         cv2.imwrite(f'{RESULT_IMG_DIR}{data_number}.png', im0)
-                        data_number += 1
                         cv2.circle(im0, (round(wval*x0), round(hval*y0)), 1, (0, 0, 255), thickness=-1)
                         # depth_image = np.asanyarray(dataset.depth_frame.get_data())[upper_y:lower_y,left_x:right_x]
                         # depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.02), cv2.COLORMAP_JET)
@@ -559,6 +568,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                     #             , (10,90+120), cv2.FONT_HERSHEY_SIMPLEX, 1.7, (255, 255, 255), 3, cv2.LINE_AA)
 
                     cv2.imshow('mpYolo', im0)
+                    data_number += 1
                     # cv2.imshow('pose', im_pose)
                         # cv2.waitKey(1)  # 1 millisecond
                 #hrcode
