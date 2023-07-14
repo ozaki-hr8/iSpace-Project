@@ -8,7 +8,7 @@ SAVE_DIR = 'client_data/annotation_img'
 
 data_number = 0
 select_list = []
-index = 4000
+index = 1000
 
 fn = os.listdir(RAW_IMG_DIR)
 file_tuples = [(int(f.split(".")[0]), f) for f in fn if f[:-4].isdigit()]
@@ -64,6 +64,7 @@ while(True):
 if key == ord('k'):
     for i in select_list:
         im_raw = cv2.imread(f'{RAW_IMG_DIR}/{file_names[i]}')
-        cv2.imwrite(f'{SAVE_DIR}/{file_names[i]}', im_raw)
+        cv2.imwrite(f'{SAVE_DIR}/output_{data_number}.png', im_raw)
+        data_number += 1
 
 cv2.destroyAllWindows()
