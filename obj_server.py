@@ -99,24 +99,36 @@ def map_view():
                 average_location[0] = temp_x
                 x, y = person_map.get_map_location(average_location)
                 map_img = person_map.plot(x, y, k, map_img)
-                # if(x>=0 and y>=0 and x<person_map.width and y < person_map.height):
-                #     file_exists = False
-                #     file_path = 'obj_data.csv'
-                #     try:
-                #         with open(file_path, 'r'):
-                #             file_exists = True
-                #     except FileNotFoundError:
-                #         pass
-                #     with open(file_path, 'a', newline='') as file:
-                #         writer = csv.writer(file)
-                #         # ファイルが存在しなかった場合はヘッダーを書き込む
-                #         if not file_exists:
-                #             writer.writerow(['class', 'x', 'y'])  # ヘッダーの内容を適宜変更
-                #         # データを書き込む
-                #         writer.writerow([time_stamp, x, y, action, ",".join(map(str, interact_list)), ",".join(map(str, target_obj_list))])
         cv2.imshow('server_map', map_img) 
-        cv2.waitKey(1)
+        key = cv2.waitKey(1)
+
+        if key == 27:
+            file_exists = False
+            file_path = 'obj_data.csv'
+            try:
+                with open(file_path, 'r'):
+                    file_exists = True
+            except FileNotFoundError:
+                pass
+            with open(file_path, 'a', newline='') as file:
+                writer = csv.writer(file)
+                # ファイルが存在しなかった場合はヘッダーを書き込む
+                if not file_exists:
+                    writer.writerow(['class_name', 'x', 'y'])  # ヘッダーの内容を適宜変更
+                # データを書き込む
+                for k, v in data_dict.items():
+                    for val in v:
+                        average_location = [val['x'], val['z']]
+                        temp_x = -MOVE_X+average_location[0]*math.cos(MOVE_THETA)-average_location[1]*math.sin(MOVE_THETA)
+                        average_location[1] = -MOVE_Z+average_location[0]*math.sin(MOVE_THETA)+average_location[1]*math.cos(MOVE_THETA)
+                        average_location[0] = temp_x
+                        x, y = person_map.get_map_location(average_location)
+                        print(x,y, person_map.width, person_map.height)
+                        if(x>=0 and y>=0 and x<person_map.width and y < person_map.height):
+                            writer.writerow([k, x, y])
+                break
         time.sleep(RELOAD_INTERVAL)
+    cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
