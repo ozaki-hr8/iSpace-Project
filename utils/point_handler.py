@@ -220,7 +220,8 @@ class Point:
         }
 
     def convert_location(self, X=0, Z=0, THETA=0, PITCH=0):
-        self.z *= math.cos(PITCH)
+        if PITCH != 0:
+            self.z *= math.cos(PITCH)
         if X == 0 and Z == 0:
             return
         temp_x = -X+self.x*math.cos(THETA)-self.z*math.sin(THETA)
@@ -331,6 +332,17 @@ class PointMap:
                                         )
         cv2.putText(map_img, str(interaction_class),
                                    (center[0]+30,center[1]-10),
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA
+                                        )
+        return map_img
+    
+    def plot(self, x, y, obj_name, map_img):
+        if x == -999:
+            return map_img
+        center = (x, y)
+        cv2.circle(map_img, center, 3, (0,0,255), thickness=-1)
+        cv2.putText(map_img, str(obj_name),
+                                   (center[0]+30,center[1]+10),
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA
                                         )
         return map_img
