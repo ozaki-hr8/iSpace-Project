@@ -153,7 +153,7 @@ def get_person_xy(person_list, results):
         return x, y
 
 @torch.no_grad()
-def run(weights='yolov5s.pt',  # model.pt path(s)
+def run(weights='last2.pt',  # model.pt path(s)
         source='data/images',  # file/dir/URL/glob, 0 for webcam
         imgsz=640,  # inference size (pixels)
         conf_thres=0.25,  # confidence threshold
@@ -501,7 +501,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                                     x, y, z, w, h = obj_list[select_obj][0][1:6]
                         if obj_id == id_list[0]:  #person
                             x0, y0= get_person_xy(obj_list, results)
-                            location_3d = get_3d_location(color_intr, dataset.depth_frame, round(wval*x0), round(hval*y0))
+                            location_3d = get_3d_location(color_intr, dataset.depth_frame, round((wval-1)*x0), round((hval-1)*y0))
                             continue
                         z = round(z*100)
                         if obj_id == id_list[1] and True:  #cellphone 使用しない場合はTrueをFalseに
