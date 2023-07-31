@@ -24,16 +24,14 @@ SERVER_IP = get_ip()
 SERVER_PORT = get_port()
 
 CONTAIN_NO_BONE_DATA = False
+PERSON_ID = '9'
 #----------------------------------------------------------------------------------------
-
-RAW_IMG_DIR = 'client_data/raw_img/'
-RESULT_IMG_DIR = 'client_data/result_img/'
-CSV_DIR = 'client_data/csv_data/'
 
 import argparse
 import sys
 import time
 from pathlib import Path
+import threading
 
 import cv2
 import numpy as np
@@ -54,12 +52,8 @@ from utils.point_handler import Point
 #hrcode
 import mediapipe as mp
 import numpy as np
-import os
 
-import csv
-import pickle
 import pandas as pd
-import math
 
 
 import pyrealsense2 as rs
@@ -69,9 +63,36 @@ import json
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic =  mp.solutions.holistic
 
+current_x = 0
+current_z = 0
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-if CONNECT:
-    sock.connect((SERVER_IP, SERVER_PORT))
+
+def loop_handler():
+    global sock
+    while True:
+        try:
+            res = sock.recv(4096)
+            res_data = res.decode('utf-8')
+        except Exception as e:
+            print(e)
+            sock.close()
+            break
+        if res_data:
+            if res_data == 'B':
+                before_data = {
+                    'bx' : X,
+                    'bz' : Z,
+                    'bt' : THETA
+                }
+                sock.send(json.dumps(before_data).encode('UTF-8'))
+            elif res_data == 'C':
+                current_data = {
+                    'cx' : current_x,
+                    'cz' : current_z
+                }
+                sock.send(json.dumps(current_data).encode('UTF-8'))
+            elif ',' in res_data:
+                print(res_data)
 
 def get_3d_location(color_intr, depth_frame, pixel_x, pixel_y):
     if pixel_x==0 and pixel_y==0:
@@ -82,28 +103,6 @@ def get_3d_location(color_intr, depth_frame, pixel_x, pixel_y):
     location_3d = rs.rs2_deproject_pixel_to_point(color_intr , [pixel_x,pixel_y], distance)
     return location_3d
 
-def map_view(location_3d):
-    X_RANGE = 2.0
-    Y_RANGE = 5.0
-    MAP_SIZE = (480,640)
-    white_img=np.zeros(MAP_SIZE,np.uint8)
-    white_img = white_img + 255
-    y = int((location_3d[2]/Y_RANGE)*MAP_SIZE[1])
-    x = int(((location_3d[0]/X_RANGE)+1)*(MAP_SIZE[0]/2))
-    cv2.circle(white_img, (y,x), 3, (0, 0, 255), thickness=-1)
-    cv2.imshow('map', white_img)
-
-def send_location(data_dict, current_time):
-    global sock
-    data_dict['timestamp'] = current_time
-    sock.send(json.dumps(data_dict).encode("UTF-8"))
-
-def add_location_data(data_dict, data_name, point):
-    if data_name in data_dict:
-        data_dict[data_name].append(point.get_json())
-    else:
-        data_dict[data_name] = [point.get_json()]
-    return data_dict
 
 def get_person_xy(person_list, results):
     x, y = 0, 0
@@ -117,15 +116,9 @@ def get_person_xy(person_list, results):
         pass
     finally:
         if x == 0 and y == 0:
-            if CONTAIN_NO_BONE_DATA:
-                person_list = person_list.astype(float)
-                target_box = person_list[np.where(person_list[:,6] == np.max(person_list[:,6]))]
-                x, y = target_box[0][1:3]
-                w, h = target_box[0][4:6]
-                x += w/2
-                y += h/2
+            pass
         else:
-            data = np.where((x>=person_list[:,1]) & (y >= person_list[:,2]) & (x <= person_list[:,1]+person_list[:,4]) & (y <= person_list[:,2]+person_list[:,5]))
+            data = np.where((x>=person_list[:,0]) & (y >= person_list[:,1]) & (x <= person_list[:,0]+person_list[:,2]) & (y <= person_list[:,1]+person_list[:,3]))
             if data[0].shape[0] == 0:
                 x, y = 0, 0
         x = min(1, x)
@@ -161,6 +154,13 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
         half=False,  # use FP16 half-precision inference
         tfl_int8=False,  # INT8 quantized TFLite model
         ):
+    global current_x
+    global current_z
+    global sock
+    if CONNECT:
+        sock.connect((SERVER_IP, SERVER_PORT))
+        thread = threading.Thread(target=loop_handler)
+        thread.start()
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://', 'https://'))
@@ -285,14 +285,14 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             pred = non_max_suppression(pred, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)
             t2 = time_sync()
 
-            id_list = ['9', '4', '1', '6', '2','5','0']
-
             # Second-stage classifier (optional)
             if classify:
                 pred = apply_classifier(pred, modelc, img, im0s)
 
             #[obj, x, y, z, w, h, conf, cx]
-            box_list = np.empty((0,8), float)
+            box_list = np.empty((0,4), float)
+            current_x = 0
+            current_z = 0
 
             # Process predictions
             for i, det in enumerate(pred):  # detections per image
@@ -335,26 +335,18 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             y = float(xyxy[1]) / hval
                             w = float(xyxy[2] - xyxy[0]) / wval
                             h = float(xyxy[3] - xyxy[1]) / hval
-                            cx = min(639, round(wval*(x+w/2)))
-                            cx = max(0, cx)
-                            cy = min(479, round(hval*(y+h/2)))
-                            cy = max(0, cy)
-                            z = dataset.depth_frame.get_distance(cx, cy)
-                            if z > 0:
-                                obj_3d = rs.rs2_deproject_pixel_to_point(color_intr , [cx,cy], z)
-                                box_list = np.append(box_list, np.array([[obj,x,y,z,w,h,conf.item(), obj_3d[0]]]), axis=0)
+                            if obj == PERSON_ID:
+                                box_list = np.append(box_list, np.array([[x,y,w,h]]), axis=0)
 
                         if save_img or save_crop or view_img:  # Add bbox to image
                             c = int(cls)  # integer class
                             label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
-                            if obj in id_list:
-                                im0 = plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_width=line_thickness)
+                            im0 = plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_width=line_thickness)
                             if save_crop:
                                 save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
 
                 # Print time (inference + NMS)
                 print(f'{s}Done. ({t2 - t1:.3f}s)')
-                DISTANCE_THRES = 1.0
 
                 # Stream results
                 #hrcode
@@ -366,28 +358,14 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                                                 mp_drawing.DrawingSpec(color=(245,66,230),thickness=2,circle_radius=2)
                                                 )
 
-                    data_dict={}
                     location_3d = None
-                    x0, y0 = 0, 0
-                    for obj_id in id_list:
-                        x, y, z, w, h = 0, 0, 0, 0, 0
-                        #確率が最大の物を1つ選択
-                        obj_list = box_list[np.where(box_list[:,0] == obj_id)].astype(float)
-                        if obj_list.shape[0] > 0:
-                            if location_3d:
-                                distance_list = (location_3d[0]-obj_list[:, 7])**2+(location_3d[2] - obj_list[:, 3])**2
-                                select_obj = np.where(distance_list[:] <= DISTANCE_THRES**2)
-                                if select_obj[0].shape[0] > 0:
-                                    x, y, z, w, h = obj_list[select_obj][0][1:6]
-                        if obj_id == id_list[0]:  #person
-                            x0, y0= get_person_xy(obj_list, results)
-                            if not (x0 == 0 and y0 == 0):
-                                location_3d = get_3d_location(color_intr, dataset.depth_frame, round(wval*x0), round(hval*y0))
+                    x0, y0= get_person_xy(box_list, results)
+                    if not (x0 == 0 and y0 == 0):
+                        location_3d = get_3d_location(color_intr, dataset.depth_frame, round((wval-1)*x0), round((hval-1)*y0))
 
                     if location_3d is not None:
-                        print(data_dict)
-                    if CONNECT:
-                        send_location(data_dict, time.time())
+                        current_x = location_3d[0]
+                        current_z = location_3d[2]
                     
                     cv2.imshow('mpYolo', im0)
                 # Save results (image with detections)
