@@ -12,7 +12,7 @@ import json
 import cv2
 import numpy as np
 import time
-from calibration.calib_ip_handler import get_ip, get_port
+from utils.ip_handler import get_ip, get_port
 
 # 接続待ちするサーバのホスト名とポート番号を指定
 HOST = get_ip()
