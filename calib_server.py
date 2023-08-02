@@ -13,6 +13,8 @@ import cv2
 import numpy as np
 import time
 from utils.ip_handler import get_ip, get_port
+import matplotlib.pyplot as plt
+from scipy.optimize import minimize
 
 # 接続待ちするサーバのホスト名とポート番号を指定
 HOST = get_ip()
@@ -26,7 +28,7 @@ MAP_SIZE=(640,640)
 client_list = []
 state = 0
 
-END_COUNT = 300
+END_COUNT = 200
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -68,8 +70,8 @@ class Client:
     def send_signal(self):
         self.connection.send('C'.encode(encoding='utf-8'))
 
-    def theta_average(self, t1, t2, t3, t4):
-        theta = np.array([t1, t2, t3, t4])
+    def theta_average(self, t1, t2):
+        theta = np.array([t1, t2])
         x, y = np.cos(theta), np.sin(theta)
 
         x_mean = np.mean(x)
@@ -84,41 +86,83 @@ class Client:
         value = max(1, value)
         return min(-1, value)
 
-    def get_matrix(self, world_coods):
-        self.X = np.empty((0,2),float)
-        self.W = np.array([])
+    # def get_matrix(self, world_coods):
+    #     self.X = np.empty((0,2),float)
+    #     self.W = np.array([])
+    #     print(len(self.data_list), len(world_coods))
+    #     for i in range(len(self.data_list)):
+    #         if self.data_list[i] == 'NoData' or world_coods[i] == 'NoData':
+    #             continue
+    #         self.X = np.append(self.X, np.array([[self.data_list[i][0], self.data_list[i][1]]]), axis=0)
+    #         self.W = np.append(self.W, np.array([world_coods[i][0], world_coods[i][1]]))
+    #     self.XX = []
+    #     for i in range(len(self.X)):
+    #         self.XX.append([self.X[i][0], self.X[i][1], 1, 0, 0, 0])
+    #         self.XX.append([0, 0, 0, self.X[i][0], self.X[i][1], 1])
+    #     self.XX = np.array(self.XX)
+    #     matrix = np.linalg.inv(self.XX.T.dot(self.XX)).dot(self.XX.T).dot(self.W)
+    #     print(matrix)
+    #     dx = -matrix[2]
+    #     dz = matrix[5]
+    #     #dt = (self.n(math.acos(self.t(matrix[0])))+self.n(math.asin(self.t(-matrix[1])))+self.n(math.asin(self.t(matrix[3])))+self.n(math.acos(self.t(matrix[4]))))/4
+    #     dt = -self.theta_average(math.acos(self.t((matrix[0]+matrix[4])/2)), math.asin(self.t((-matrix[1]+matrix[3])/2)))
+    #     #dt = self.n(math.acos(self.t(matrix[0])))
+    #     return dx, dz, dt
+
+    def affine_transform(self, params):
+        t, x, y = params
+        matrix = np.array([[np.cos(t), -np.sin(t), x], [np.sin(t), np.cos(t), y], [0, 0, 1]])
+        tfm_points = np.dot(self.hom, matrix.T)[:, :2]
+        return np.sum((tfm_points - self.WW) ** 2)
+
+    def get_matrix_scipy(self, world_coods):
+        self.WW = np.empty((0,2),float)
         for i in range(len(self.data_list)):
             if self.data_list[i] == 'NoData' or world_coods[i] == 'NoData':
                 continue
             self.X = np.append(self.X, np.array([[self.data_list[i][0], self.data_list[i][1]]]), axis=0)
-            self.W = np.append(self.W, np.array([world_coods[i][0], world_coods[i][1]]))
-        self.XX = []
-        for i in range(len(self.X)):
-            self.XX.append([self.X[i][0], self.X[i][1], 1, 0, 0, 0])
-            self.XX.append([0, 0, 0, self.X[i][0], self.X[i][1], 1])
-        self.XX = np.array(self.XX)
-        matrix = np.linalg.inv(self.XX.T.dot(self.XX)).dot(self.XX.T).dot(self.W)
-        dx = matrix[2]
-        dz = matrix[5]
-        #dt = (self.n(math.acos(self.t(matrix[0])))+self.n(math.asin(self.t(-matrix[1])))+self.n(math.asin(self.t(matrix[3])))+self.n(math.acos(self.t(matrix[4]))))/4
-        dt = self.theta_average(math.acos(self.t(matrix[0])), math.asin(self.t(-matrix[1])), math.asin(self.t(matrix[3])), math.acos(self.t(matrix[4])))
-        #dt = self.n(math.acos(self.t(matrix[0])))
-        return dx, dz, dt
+            self.WW = np.append(self.WW, np.array([[world_coods[2*i], world_coods[2*i+1]]]), axis=0)
+        self.hom = np.hstack((self.X, np.ones((self.X.shape[0],1))))
+
+        initial_guess = [math.pi, 0, 0]
+        result = minimize(self.affine_transform, initial_guess, method='L-BFGS-B')
+        t, x, y = result.x
+        return -x, -y, t
+
     
     def get_diff(self, dx, dz, dt):
         diff_x = 0
         diff_z = 0
         diff_dist = 0
         size = self.X.shape[0]
+        plt.figure(figsize=(8,4))
+        pxs = []
+        pzs = []
+        wxs = []
+        wzs = []
         for i in range(self.X.shape[0]):
             px, pz = self.X[i]
             temp_x = -dx+px*math.cos(dt)-pz*math.sin(dt)
             pz = -dz+px*math.sin(dt)+pz*math.cos(dt)
             px = temp_x
-            wx, wz = self.W[2*i], self.W[2*i-1]
+            wx, wz = self.W[2*i], self.W[2*i+1]
             diff_x += abs(wx-px)
             diff_z += abs(wz-pz)
             diff_dist += abs(math.sqrt((wx-px)**2+(wz-pz)**2))
+            pxs.append(px)
+            pzs.append(pz)
+            wxs.append(wx)
+            wzs.append(wz)
+        plt.scatter(pxs, pzs, marker='x', color='red', label='convert points')
+        plt.scatter(wxs, wzs, marker='x', color='green', label='correct points')
+        plt.xlabel('x')
+        plt.ylabel('z')
+        plt.title(f'{dx}')
+        plt.grid(True)
+        plt.legend()
+        plt.xlim(-10,10)
+        plt.ylim(0,10)
+        plt.show()
         return diff_x/size, diff_z/size, diff_dist/size
 
     def get_diff_current(self, dx, dz, dt):
@@ -197,17 +241,16 @@ def main():
             base_client = client_list[0]
             for i in range(len(client_list)-1):
                 clt = client_list[i+1]
-                dx, dz, dt = clt.get_matrix(base_client.data_list)
-                diff_x, diff_z, diff_theta = clt.get_diff(-dx, dz, -dt)
+                dx, dz, dt = clt.get_matrix_scipy(base_client.data_list)
+                sdiff_x, sdiff_z, sdiff_theta = clt.get_diff(dx, dz, dt)
                 bdiff_x, bdiff_z, bdiff_theta = clt.get_diff(clt.bx, clt.bz, clt.bt)
-                print(f'result: {dx},{dz},{dt}')
+                print(f'scipy result: {dx},{dz},{dt}')
                 print(f'before_result: {clt.bx},{clt.bz},{clt.bt}')
+                print(f'scipy_diff: {sdiff_x},{sdiff_z},{sdiff_theta}')
                 print(f'before_diff: {bdiff_x},{bdiff_z},{bdiff_theta}')
-                print(f'current_diff: {diff_x},{diff_z},{diff_theta}')
             state = 5
         elif state == 5:
             sock.close()
-            cv2.destroyAllWindows()
             break
 
 
